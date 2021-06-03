@@ -41,6 +41,8 @@ class Arm:
         self.initialize(baseT, baseS, Mee, q)
         self._Mlinks = 0
         self._Glinks = 0
+        self._Mhome = None
+        self._Dims = None
         self.failcount = 0
         for i in range(0,baseS.shape[1]):
             self.Sbody[:,i] = fmr.Adjoint(self.Mee.inv().gTM()) @ self.S[:,i]
@@ -106,7 +108,7 @@ class Arm:
     #Converted to python - Liam
     def FKLink(self,theta,i):
         """
-        Calculates the position of a given joint provided a theeta list
+        Calculates the position of a given joint provided a theta list
         :param theta: The array of theta values for each joint
         :param i: The index of the joint desired, from 0
         """
@@ -114,19 +116,6 @@ class Arm:
         # Lynch 4.1
         endpos =  tm(fmr.FKinSpace(self._Mhome[i].TM,self.S[0:6,0:i],theta[0:i]))
         return endpos
-
-    def FKAnalytical(self, theta, anatype):
-        """
-        This function has been deprecated and needs conversion
-        """
-        if anatype == 1:
-            Teeana = fsr.TwistFromTransform(self.FK(theta))
-        elif anatype == 2:
-            Teeana = fsr.TMtoTAA(self.FK(theta))
-        else:
-            print("Invalid Analytical Type")
-
-        return Teeana
 
     #Converted to python - Liam
     def IK(self,T, th0 = np.zeros(1), check = 1, level = 6):
@@ -157,116 +146,6 @@ class Arm:
                 if success:
                     self.eepos = T
         return theta, success
-
-    def dualConstrainedIK(self, other, check = 1, level = 6, thetalist1 = np.zeros(1), thetalist2 = np.zeros(1)):
-        """
-        This function is unfinished, and does not currently work. No support provided.
-        It is left here to motivate potential future work
-        """
-        Slist1 = self.S.copy()
-        Slist2 = other.S.copy()
-        if check == 1:
-            self.failcount = 0
-        M1 = self.Mee.copy()
-        M2 = other.Mee.copy()
-        eomg = .001
-        ev = .0001
-        if np.size(thetalist1) == 1:
-            thetalist1 = np.zeros((len(self._theta)))
-        if np.size(thetalist2) == 1:
-            thetalist2 =  np.zeros((len(other._theta)))
-        i = 0
-        disp(thetalist1)
-        maxiterations = 50
-
-        Tsb1 = fmr.FKinSpace(M1.gTM(), Slist1, thetalist1)
-        Tsb2 = fmr.FKinSpace(M2.gTM(), Slist2, thetalist2)
-        mp = (tm(self.baseT) + tm(other.baseT)/2).gTM()
-
-        Vs1 = np.dot(fmr.Adjoint(Tsb1), fmr.se3ToVec(fmr.MatrixLog6(np.dot(fmr.TransInv(Tsb1), mp @ tm([0, 0, 0, -np.pi/2, 0, 0]).gTM()))))
-        Vs2 = np.dot(fmr.Adjoint(Tsb2), fmr.se3ToVec(fmr.MatrixLog6(np.dot(fmr.TransInv(Tsb2), mp @ tm([0, 0, 0, np.pi/2, 0, 0]).gTM()))))
-
-        err = np.linalg.norm([Vs1[0], Vs1[1], Vs1[2]]) > eomg \
-              or np.linalg.norm([Vs2[0], Vs2[1], Vs2[2]]) > eomg \
-              or np.linalg.norm([Vs1[3], Vs1[4], Vs1[5]]) > ev \
-              or np.linalg.norm([Vs2[3], Vs2[4], Vs2[5]]) > ev
-        if np.isnan(Vs1).any():
-            err = True
-        if np.isnan(Vs2).any():
-            err = True
-
-        #try:
-        while err and i < maxiterations:
-            disp(sum(abs(fsr.Error(tm(Tsb1), tm(Tsb2)))))
-            thetalist1 = thetalist1 + np.dot(np.linalg.pinv(fmr.JacobianSpace(Slist1, thetalist1)), Vs1)
-            for j in range(len(thetalist1)):
-                if thetalist1[j] < self.jointMins[j]:
-                    thetalist1[j] = self.jointMins[j]
-                if thetalist1[j] > self.jointMaxs[j]:
-                    thetalist1[j] = self.jointMaxs[j];
-
-            thetalist2 = thetalist2 + np.dot(np.linalg.pinv(fmr.JacobianSpace(Slist2, thetalist2)), Vs2)
-            for j in range(len(thetalist2)):
-                if thetalist2[j] < other.jointMins[j]:
-                    thetalist2[j] = other.jointMins[j]
-                if thetalist2[j] > other.jointMaxs[j]:
-                    thetalist2[j] = other.jointMaxs[j];
-
-            i = i + 1
-            Tsb1 = fmr.FKinSpace(M1.gTM(), Slist1, thetalist1)
-            Tsb2 = fmr.FKinSpace(M2.gTM(), Slist2, thetalist2)
-
-            #mp = (tm(Tsb1) + tm(Tsb2)/2).gTM()
-
-            Vs1 = np.dot(fmr.Adjoint(Tsb1), \
-                        fmr.se3ToVec(fmr.MatrixLog6(np.dot(fmr.TransInv(Tsb1), Tsb2@ tm([0, 0, 0, -np.pi, 0, 0]).gTM()))))
-
-            Vs2 = np.dot(fmr.Adjoint(Tsb2), \
-                        fmr.se3ToVec(fmr.MatrixLog6(np.dot(fmr.TransInv(Tsb2), Tsb1@ tm([0, 0, 0, 0, 0, 0]).gTM()))))
-            #p@ tm([0, 0, 0, np.pi, 0, 0]).gTM()
-            err = np.linalg.norm([Vs1[0], Vs1[1], Vs1[2]]) > eomg \
-                  or np.linalg.norm([Vs2[0], Vs2[1], Vs2[2]]) > eomg \
-                  or np.linalg.norm([Vs1[3], Vs1[4], Vs1[5]]) > ev \
-                  or np.linalg.norm([Vs2[3], Vs2[4], Vs2[5]]) > ev
-            if np.isnan(Vs1).any():
-                err = True
-            if np.isnan(Vs2).any():
-                err = True
-        #except:
-            #err = True
-        success = not err
-
-        if success:
-            self.eepos = Tsb1
-            other.eepos = Tsb2
-        else:
-            if check == 1:
-                i = 0
-                while i < level and success == 0:
-                    thz = np.zeros((len(self._theta)))
-                    for j in range(len(thz)):
-                        thz[j] = random.uniform(-np.pi, np.pi)
-                    thz2 = np.zeros((len(other._theta)))
-                    for j in range(len(thz2)):
-                        thz2[j] = random.uniform(-np.pi, np.pi)
-                    theta,success = self.dualConstrainedIK(other, check = 0, thetalist1= thz, thetalist2 = thz2)
-                    i = i + 1
-                if success:
-                    self.eepos = Tsb1
-                    other.eepos = Tsb2
-        if not success:
-            if check == 0:
-                self.failcount += 1
-            else:
-                print("Total Cycle Failure")
-        else:
-            if self.failcount != 0:
-                print("Success + " + str(self.failcount) + " failures")
-        self.FK(thetalist1)
-        other.FK(thetalist2)
-
-
-        return thetalist1, success
 
 
     def constrainedIK(self, T, th0, check = 1, level = 6):
@@ -330,7 +209,7 @@ class Arm:
 
     def constrainedIKNoFMR(self, Slist, M, T, thetalist, eomg, ev, maxiterations):
         """
-        USed as a backup function for ths ttandard constrained IK
+        USed as a backup function for the standard constrained IK
         """
         Tsb = fmr.FKinSpace(M.gTM(), Slist, thetalist)
         Vs = np.dot(fmr.Adjoint(Tsb), fmr.se3ToVec(fmr.MatrixLog6(np.dot(fmr.TransInv(Tsb), T.gTM()))))
@@ -729,13 +608,14 @@ class Arm:
         self._Mlinks = data["MLinks"]
         self._Glinks = data["GLinks"]
 
-    def SetDynamicsProperties(self, _Mlinks, _Mhome, _Glinks, _Dims):
+    def SetDynamicsProperties(self, _Mlinks = None, _Mhome = None, _Glinks = None, _Dims = None):
         """
         Set dynamics properties of the arm
+        At mimimum Dims are a required parameter for drawing of the arm.
         :param _Mlinks: The mass matrices of links
-        :param _MHome:
-        :param _GLinks:
-        :param _Dims:
+        :param _MHome: List of Home Positions
+        :param _GLinks: Mass Matrices (Inertia)
+        :param _Dims: Dimensions of links
         """
         self._Mlinks = _Mlinks
         self._Mhome = _Mhome
@@ -788,13 +668,16 @@ class Arm:
         #print(eepos, "EEPOS")
         retTAA[0] = eepos
         for i in range((self.S.shape[1])):
-            t = tm(np.zeros((6)))
-            t.TAA[0:3,0] = self.originalQ[0:3,i]
-            t.TAAtoTM()
-            Mee = self.baseT @ t
+            if self._Mhome == None:
+                t = tm(np.zeros((6)))
+                t.TAA[0:3,0] = self.originalQ[0:3,i]
+                t.TAAtoTM()
+                Mee = self.baseT @ t
+            else:
+                Mee = self._Mhome[i]
             #print(Mee, "Mee" + str(i + 1))
             #print(self._theta[0:i+1])
-            eepos = tm(fmr.FKinSpace(Mee.gTM(), self.S[0:6,0:i+1],self._theta[0:i+1]))
+            eepos = tm(fmr.FKinSpace(Mee.gTM(), self.S[0:6,0:i],self._theta[0:i]))
             #print(eepos, "EEPOS")
             retTAA[i] = eepos
         if Dims.shape[0] > self.S.shape[1]:
@@ -838,10 +721,10 @@ class Arm:
         """
         Calculate forces on each link of the serial arm
         :param theta: Current position of the arm
-        :param wrenchEE: end effector wrench
+        :param wrenchEE: end effector wrench (body frame)
         :return: forces in newtons on each joint
         """
-        Tee = self.FK(theta)
+        Tee = self.FK(theta) #Space Frame
         wrenchS = Tee.inv().Adjoint().conj().T @ wrenchEE
         tau = self.Jacobian(theta).conj().T @ wrenchS
         return tau
@@ -1075,108 +958,3 @@ class Arm:
     def Draw(self, ax):
         DrawArm(self, ax)
     #Converted to python -Liam
-
-
-    """
-      __  __ _
-     |  \/  (_)
-     | \  / |_ ___  ___
-     | |\/| | / __|/ __|
-     | |  | | \__ \ (__ _
-     |_|  |_|_|___/\___(_)
-    """
-
-
-    #Converted to Python - Joshua
-
-    def EEVel(self, vels, theta = np.array([0])):
-        if (len(theta.shape) == 1 and theta.shape[0] == 1):
-            theta = self._theta
-
-        jac = self.Jacobian(theta)
-        vels = ling.inv(jac) @ vels
-
-    def ManipulabilityAxisLengths(self, theta,includeinds):
-        JEEtrans = self.JacobianEEtrans(theta)
-        Jw = JEEtrans[0:3,includeinds]
-        Jv = HEEtrans[3:6,includeinds]
-        smaw = math.sqrt(ling.eig(Jw @ Jw.conj().transpose()))
-        smav = math.sqrt(ling.eig(Jw @ Jw.conj().transpose()))
-
-        return smaw, smav
-
-    def TwistSpace(self, theta, thetadot):
-        tws = self.Jacobian(theta) @ thetadot
-        return tws
-
-    def ThetaDotSpace(self, theta, twS):
-        return ling.pinv(self.Jacobian(theta)) @ twS
-
-    def ThetaDotSpaceFixVels(self, theta, twS, fixinds, fixvels):
-        J = self.Jacobian(theta)
-        pJ = ling.pinv(J)
-        B = pJ @ twS
-        pJp = pJ @ J
-        A = np.identity(pJp.shape[0])-pJp
-        passiveinds = np.arange(0,len(theta))
-        #passiveinds = np.hstack((passiveinds[0:fixinds[0]],passiveinds[fixinds[1]+1:]))
-        passiveinds[fixinds] = 0
-        print("passiveinds")
-        print(passiveinds)
-        Ba = B[fixinds,:]
-        Bp = B[passiveinds,:]
-        Aaa = A[fixinds,fixinds]
-        Aap = A[fixinds,passiveinds]
-        Wp = np.zeros((Bp.shape))
-        Wa = ling.inv(Aaa) @ (fixvels - Ba - (Aap @ Wp))
-        W = np.zeros((theta.shape))
-        W[fixinds] = Wa
-        W[passiveinds] = Wp
-        thetadot = B + A @ W
-        if fsr.Norm(twS-self.TwistSpace(theta,thetadot)) > .0001:
-            print("Failed")
-        return thetadot
-
-    def TwistSpaceToGoalEE(self, theta, Tend):
-        Tstart = self.FK(theta)
-        Tt = (ling.inv(Tstart).conj().transpose() @ Tend.conj().transpose()).conj().transpose()
-        return fsr.TwistFromTransform(Tt)
-
-    def UnitTwistSpaceToGoalEE(self, theta,Tend):
-        return fmr.NormalizeTwist(self.TwistSpaceToGoalEE(theta,Tend))
-
-    def TwistEETransToGoalEE(self, theta, Tend):
-        Tee = self.FK(theta)
-        Tee[0:3,0:3] = np.identity((3))
-        return fmr.Adjoint(ling.inv(Tee)) @ self.TwistSpaceToGoalEE(theta,Tend)
-
-    def UnitTwistEETransToGoalEE(self, theta, Tend):
-        return fmr.NormalizeTwist(self.TwistEETransToGoalEE(theta, Tend))
-
-    def TwistEE(self, theta, thetadot):
-        return fmr.Adjoint(ling.inv(self.FK(theta))) @ self.TwistSpace(theta, thetadot)
-
-    def ThetadotEE(self, theta, twEE):
-        Tee = self.FK(theta)
-        twS = fmr.Adjoint(Tee) @ twEE
-        return self.ThetadotSpace(theta,twS)
-
-    def TwistEETrans(self, theta, thetadot):
-        Tee = self.FK(theta)
-        Tee[0:3,0:3] = np.identity((3))
-        twEEtrans = fmr.Adjoint(ling.inv(Tee)) @ self.TwistSpace(theta,thetadot)
-
-    def ThetadotEETrans(self, theta, twEEtrans):
-        Tee = self.FK(theta)
-        Tee[0:3,0:3] = np.eye(3)
-        twS = fmr.Adjoint(Tee) * twEEtrans
-        thetadot = self.ThetadotSpace(theta,twS)
-
-
-    def ThetadotStep(self,th0,thdot,deltat):
-        return th0+deltat @ thdot
-
-    def TwistStep(self, th0, twist, twType, deltat):
-        t, th = self.FollowTwistTime(th0, twist, twType, 0, deltat)
-        thend = th[end,:].conj().transpose()
-        return thend
