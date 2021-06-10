@@ -8,24 +8,6 @@ import json
 from os.path import dirname, basename, isfile
 
 class Arm:
-    S = 0
-    Sbody= 0
-    q = 0
-    originalQ = 0
-    orignalMee= 0
-    originalS = 0
-    originalW = 0
-    Mee= 0
-    _Mlinks= 0
-    _Mhome= 0
-    _Glinks= 0
-    _Dims= 0
-    _theta = 0
-    _jaxes = 0
-    Masses = 0
-    baseT = 0
-    eepos = 0
-    #Think this should work
 
     #Converted to python - Liam
     def __init__(self, baseT, baseS, Mee, q, W = np.array([0])):
@@ -94,19 +76,30 @@ class Arm:
       | . \| | | | |  __/ | | | | | (_| | |_| | (__\__ \
       |_|\_\_|_| |_|\___|_| |_| |_|\__,_|\__|_|\___|___/
     """
+    def theta_protector(self, theta):
+        """
+        Properly bounds theta values
+        """
+        theta[np.where(theta<self.jointMins)] = self.jointMins[np.where(theta<self.jointMins)]
+        theta[np.where(theta>self.jointMaxs)] = self.jointMaxs[np.where(theta>self.jointMaxs)]
+        return theta
+
     #Converted to python -Liam
-    def FK(self, theta):
+    def FK(self, theta, protect = False):
         """
         Calculates the end effector position of the serial arm given thetas
         :param theta: The array of theta values for each joint
         """
+        if not protect and (np.any(theta < self.jointMins) or np.any(theta > self.jointMaxs)):
+            print("Unsuitable Thetas")
+            theta = self.theta_protector(theta)
         self._theta = fsr.AngleMod(theta.reshape(len(theta)))
         eepos = tm(fmr.FKinSpace(self.Mee.gTM(),self.S,theta))
         self.eepos = eepos
         return eepos
 
     #Converted to python - Liam
-    def FKLink(self,theta,i):
+    def FKLink(self,theta,i, protect = False):
         """
         Calculates the position of a given joint provided a theta list
         :param theta: The array of theta values for each joint
@@ -114,11 +107,14 @@ class Arm:
         """
         # Returns the TM of link i
         # Lynch 4.1
+        if not protect and (np.any(theta < self.jointMins) or np.any(theta > self.jointMaxs)):
+            print("Unsuitable Thetas")
+            theta = self.theta_protector(theta)
         endpos =  tm(fmr.FKinSpace(self._Mhome[i].TM,self.S[0:6,0:i],theta[0:i]))
         return endpos
 
     #Converted to python - Liam
-    def IK(self,T, th0 = np.zeros(1), check = 1, level = 6):
+    def IK(self,T, th0 = np.zeros(1), check = 1, level = 6, protect = False):
         """
         Calculates joint positions of a serial arm. All parameters are optional except the desired end effector position
         :param T: Desired end effector position to calculate for
@@ -129,6 +125,8 @@ class Arm:
         """
         if th0.size == 1:
             th0 = fsr.AngleMod(self._theta.reshape(len(self._theta)))
+        if not protect:
+            return self.constrainedIK(T,th0,check,level)
         theta,success = fmr.IKinSpace(self.S,self.Mee.gTM(),T.gTM(),th0,0.00000001,0.00000001)
         theta = fsr.AngleMod(theta)
         self._theta = theta
@@ -704,6 +702,12 @@ class Arm:
         """
         self.Mee = self.originalMee
 
+    def getEEPos(self):
+        """
+        Gets End Effector Position
+        """
+        return self.eepos.copy()
+
 
 
     """
@@ -721,22 +725,12 @@ class Arm:
         """
         Calculate forces on each link of the serial arm
         :param theta: Current position of the arm
-        :param wrenchEE: end effector wrench (body frame)
+        :param wrenchEE: end effector wrench (space frame)
         :return: forces in newtons on each joint
         """
         Tee = self.FK(theta) #Space Frame
-        wrenchS = Tee.inv().Adjoint().conj().T @ wrenchEE
-        tau = self.Jacobian(theta).conj().T @ wrenchS
+        tau = self.Jacobian(theta).conj().T @ wrenchEE
         return tau
-
-    def ForceMotion(self, thetas, wrench):
-        """
-        Unfinished
-        """
-        t_size = len(thetas)
-        forceCurve = np.zeros((t_size, len(self._theta)))
-
-
 
     #def StaticForces(self, theta, wrenchEE):
     #    Tee = self.FK(theta)
