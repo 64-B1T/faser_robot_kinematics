@@ -79,6 +79,10 @@ class Arm:
     def theta_protector(self, theta):
         """
         Properly bounds theta values
+        Args:
+            theta: joint angles to be tested and reset
+        Returns:
+            newtheta: corrected joint angles
         """
         theta[np.where(theta<self.jointMins)] = self.jointMins[np.where(theta<self.jointMins)]
         theta[np.where(theta>self.jointMaxs)] = self.jointMaxs[np.where(theta>self.jointMaxs)]
@@ -88,10 +92,13 @@ class Arm:
     def FK(self, theta, protect = False):
         """
         Calculates the end effector position of the serial arm given thetas
-        :param theta: The array of theta values for each joint
+        params:
+            theta: input joint array
+            protect: whether or not to validate action
+        returns:
+            eepos: End effector tm
         """
         if not protect and (np.any(theta < self.jointMins) or np.any(theta > self.jointMaxs)):
-            print("Unsuitable Thetas")
             theta = self.theta_protector(theta)
         self._theta = fsr.AngleMod(theta.reshape(len(theta)))
         eepos = tm(fmr.FKinSpace(self.Mee.gTM(),self.S,theta))
@@ -834,11 +841,6 @@ class Arm:
         thetadotdot = fmr.ForwardDynamics(theta, thetadot, tau, grav, wrenchEE, self._Mlinks, self._Glinks, self.S)
         return thetadotdot
 
-    def IntegrateForwardDynamics(self,theta0,thetadot0, tau,grav, wrenchEE,dt):
-        #t,thetathetadot] = ode45(@(t,x)([x(7:12);obj.ForwardDynamicsE(x(1:6),x(7:12),tau,grav,wrenchEE)]),[0 dt],[theta0;thetadot0]);
-        ## TODO:
-        return None
-
     def MassMatrix(self, theta):
         #Debugged - Liam 8/4/19
         M = np.zeros(theta.size)
@@ -907,6 +909,23 @@ class Arm:
 
         return Js
 
+    def GetManipulability(self, theta = None):
+        if theta == None:
+            theta = self._theta.copy()
+        Jb = self.JacobianBody(theta)
+        Jw = Jb[0:3,:] #Angular
+        Jv = Jb[3:6,:] #Linear
+
+        Aw = Jw @ Jw.T
+        Av = Jv @ Jv.T
+
+        AwEig, AwEigVec = np.linalg.eig(Aw)
+        AvEig, AvEigVec = np.linalg.eig(Av)
+
+        uAw = 1/(np.sqrt(max(AwEig))/np.sqrt(min(AwEig)))
+        uAv = 1/(np.sqrt(max(AvEig))/np.sqrt(min(AvEig)))
+
+        return AwEig, AwEigVec, uAw, AvEig, AvEigVec, uAv
 
     """
        _____
