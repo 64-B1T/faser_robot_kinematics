@@ -298,7 +298,7 @@ class Arm:
         res = lambda t, x: linalg.pinv(self.Jacobian(x))*twdir
         t, thall = sci.integrate.ode(res).set_integrator('vode', method='bdf', order=15)
 
-        theta = thall[-1,:].conj().transpose()
+        theta = thall[-1,:].conj().T
         if fsr.Norm(T-self.FK(theta)) < 0.001:
             success = 1
         else:
@@ -536,22 +536,6 @@ class Arm:
             j = j + 1
         return theta, fig
 
-    def FollowTwistFixVels(self,th0,twist,fixinds,fixvels,tstart,tend):
-        """
-        Not implemented because I'm too dumb for a good ode45 conversion
-        """
-        #Fix ODE45
-        #[t,th] = ode45(@(t,x)(obj.ThetadotSpaceFixVels(x,twist,fixinds,fixvels)),[tstart tend],th0);
-        return None
-
-    def GoToGoalEE(self, th0, Tend):
-        """
-        Legacy from ME5984
-        """
-        twnorm = fsr.TwistNorm(self.TwistEETransToGoalEE(th0,Tend))
-        #Fix ODE45 Conversion
-        #t, th = ode45(@(t,x)(obj.ThetadotEETrans(x,twnorm*obj.UnitTwistEETransToGoalEE(x,Tend))),[0 1],th0)
-
     def PDControlToGoalEE(self, theta, Tee, Kp, Kd, prevtheta, maxthetadot):
         """
         Legacy from ME5984
@@ -580,38 +564,6 @@ class Arm:
       \_____|\___|\__|\__\___|_|  |___/ /_/    \_\_| |_|\__,_| |_____/ \___|\__|\__\___|_|  |___/
 
     """
-    def saveArmState(fname):
-        """
-        unfinished
-        """
-        arm_dict = {"Slist" : self.S.copy(),
-            "baseT" : self.baseT.copy(),
-            "originalQ" : self.originalQ.copy(),
-            "Qlist" : self.q.copy(),
-            "SBody" : self.Sbody.copy(),
-            "EETrans" : self.EET.copy(),
-            "EEGlobal" : self.Mee.copy(),
-            "EECurrent" : self.eepos.copy(),
-            "MLinks" : self._Mlinks.copy(),
-            "GLinks" : self._Glinks.copy()}
-        with open(fname, 'w') as json_file:
-            json.dump(arm_dict, json_file)
-
-    def loadArmFromFile(fname):
-        """
-        unfinished
-        """
-        with open(fname) as f:
-            data = json.load(f)
-        self.baseT = data['baseT']
-        self.originalQ = data['originalQ']
-        self.q = data['Qlist']
-        self.Sbody = data['sBody']
-        self.EET = data['EETrams']
-        self.Mee = data['EEGlobal']
-        self.eepos = data['EECurrent']
-        self._Mlinks = data["MLinks"]
-        self._Glinks = data["GLinks"]
 
     def SetDynamicsProperties(self, _Mlinks = None, _Mhome = None, _Glinks = None, _Dims = None):
         """
@@ -741,8 +693,8 @@ class Arm:
 
     #def StaticForces(self, theta, wrenchEE):
     #    Tee = self.FK(theta)
-    #    wrenchS = fmr.Adjoint(ling.inv(Tee)).conj().transpose() @ wrenchEE
-    #    return self.Jacobian(theta).conj().transpose() @ wrenchS
+    #    wrenchS = fmr.Adjoint(ling.inv(Tee)).conj().T @ wrenchEE
+    #    return self.Jacobian(theta).conj().T @ wrenchS
 
     def StaticForcesInv(self,theta,tau):
         """
@@ -790,11 +742,11 @@ class Arm:
             if i == self.S.shape[1]-1:
                 #continue
                 Tip1_i = self._Mlinks[i+1].inv().TM
-                F[0:6,i] = fmr.Adjoint(Tip1_i).conj().T @ wrenchEE + self._Glinks[i,:,:] @ Vdot[0:6,i] - fmr.ad(V[0:6,i]).conj().transpose() @ self._Glinks[i,:,:] @ V[0:6,i]
+                F[0:6,i] = fmr.Adjoint(Tip1_i).conj().T @ wrenchEE + self._Glinks[i,:,:] @ Vdot[0:6,i] - fmr.ad(V[0:6,i]).conj().T @ self._Glinks[i,:,:] @ V[0:6,i]
             else:
                 #print( fmr.MatrixExp6(-fmr.VecTose3((A[0:6,i+1].reshape((6,1))) * theta(i + 1))) @ ling.inv(self._Mlinks[i+1,:,:]), "problem")
                 Tip1_i = fmr.MatrixExp6(-fmr.VecTose3(A[0:6,i+1]) * theta[i + 1]) @ self._Mlinks[i+1].inv().TM
-                F[0:6,i] = fmr.Adjoint(Tip1_i).conj().T @ F[0:6,i+1] + self._Glinks[i,:,:] @ Vdot[0:6,i] - fmr.ad(V[0:6,i]).conj().transpose() @ self._Glinks[i,:,:] @ V[0:6,i]
+                F[0:6,i] = fmr.Adjoint(Tip1_i).conj().T @ F[0:6,i+1] + self._Glinks[i,:,:] @ Vdot[0:6,i] - fmr.ad(V[0:6,i]).conj().T @ self._Glinks[i,:,:] @ V[0:6,i]
 
             tau[i] = F[0:6,i].conj().T @ A[0:6,i]
         return tau, A, V, Vdot, F
@@ -810,8 +762,8 @@ class Arm:
         Vbase = np.zeros((6*n, 1))
         T10 = ling.inv(self.FKLink(theta,1))
         Vdotbase = np.hstack((self.Adjoint(T10) @ np.array([[0],[0],[0],[-grav]]),np.zeros((5*n,1))))
-        Ttipend = ling.invv(self.FK(theta)) @ self.FKLink(theta, n)
-        Ftip = np.vstack((np.zeros((5*n,1)), fmr.Adjoint(Ttipend).conj().transpose() @ wrenchEE))
+        Ttipend = ling.inv(self.FK(theta)) @ self.FKLink(theta, n)
+        Ftip = np.vstack((np.zeros((5*n,1)), fmr.Adjoint(Ttipend).conj().T @ wrenchEE))
         for i in range (1,n):
             Ti_im1 = ling.inv(self.FKlink(theta,i)) @ self.FKLink(theta,i-1)
             W[(i-1) * 6 + 1:(i-1) *6 + 6, (i-2)*6+1:(i-2)*6+6] = fmr.Adjoint(Ti_im1)
@@ -823,9 +775,9 @@ class Arm:
             adV[(i-1) * 6 + 1:(i-1) * 6+6,(i-1)*6+1:(i-1)*6+6] = fmr.ad(V[(i-1)*6+1:(i-1)*6+6,0])
             adAthd[(i-1)*6+1:(i-1) * 6 + 6, (i - 1) * 6 + 1 : (i - 1) * 6 + 6] = fmr. ad(thetadot[i] @ A[(i - 1) * 6 + 1 : (i - 1)* 6 + 6, i])
         Vdot = L @ (A @ thetadotdot - adAthd @ W @ V - adAthd @ Vbase @Vdotbase)
-        F = L.conj().transpose() @ (G @ Vdot - adV.conj().transpose() @ G @ V + Ftip)
-        tau = A.conj().transpose() @ F
-        M = A.conj().transpose() @ L.conj().transpose() @ G @ L @ A
+        F = L.conj().T @ (G @ Vdot - adV.conj().T @ G @ V + Ftip)
+        tau = A.conj().T @ F
+        M = A.conj().T @ L.conj().T @ G @ L @ A
 
         return tau, M, c, G, ee
 
@@ -905,7 +857,7 @@ class Arm:
         temp = lambda x : np.reshape(self.FK(x),((1, 16)))
         Jst = fsr.NumJac(temp,theta,0.006)
         for i in range(0,np.size(theta)):
-            Js[0:6,i] = fmr.se3ToVec(ling.inv(self.FK(theta).conj().transpose()) @ np.reshape(Jst[:,i],((4, 4))).conj().transpose())
+            Js[0:6,i] = fmr.se3ToVec(ling.inv(self.FK(theta).conj().T) @ np.reshape(Jst[:,i],((4, 4))).conj().T)
 
         return Js
 
