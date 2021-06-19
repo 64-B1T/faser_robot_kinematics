@@ -33,8 +33,8 @@ class Arm:
         self.link_dimensions = None
         self.fail_count = 0
         for i in range(0,screw_list.shape[1]):
-            self.screw_list_body[:,i] = fmr.Adjoint(self.end_effector_home.inv().gTM()) @
-                self.screw_list[:,i]
+            self.screw_list_body[:,i] = (fmr.Adjoint(self.end_effector_home.inv().gTM()) @
+                self.screw_list[:,i])
         self.reversable = False
         if joint_axes.shape[0] != 1:
             self.reversable = True
@@ -73,7 +73,7 @@ class Arm:
         self.end_effector_home_local = end_effector_home
         self.end_effector_home = base_pos_global @ end_effector_home
         self.end_effector_pos_global = self.end_effector_home.copy()
-        self.originalend_effector_home = self.end_effector_home.copy()
+        self.original_end_effector_home = self.end_effector_home.copy()
 
     """
     Compatibility, for those to be deprecated
@@ -81,84 +81,165 @@ class Arm:
     def printOutOfDateFunction(sef, old_name, use_name):
         print(old_name + " is deprecated. Please use " + use_name + " instead.")
     def RandomPos(self):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("RandomPos", "randomPos")
         return self.randomPos()
     def Reverse(self):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("Reverse", "reverse")
         self.reverse()
     def vServoSP(self, target, tol = 2, ax = 0, plt = 0, fig = 0):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("vServoSP","visualServoToTarget")
         return self.visualServoToTarget(target, tol, ax, plt, fig)
     def SetDynamicsProperties(self, _Mlinks = None, _Mhome = None, _Glinks = None, _Dims = None):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("SetDynamicsProperties", "setDynamicsProperties")
         return self.setDynamicsProperties(_Mlinks, _Mhome, _Glinks, _Dims)
     def SetMasses(self, mass):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("SetMasses","setMasses")
         return self.setMasses(mass)
     def TestArmValues(self):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("TestArmValues","testArmValues")
         return self.testArmValues()
     def SetArbitraryHome(self,theta,T):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("SetArbitraryHome","setArbitraryHome")
         return self.setArbitraryHome(theta, T)
     def RestoreOriginalEE(self):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("RestoreOriginalEE","restoreOriginalEE")
         return self.restoreOriginalEE()
     def StaticForces(self,theta,wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("StaticForces","staticForces")
         return self.staticForces(theta, wrenchEE)
     def StaticForcesInv(self,theta,tau):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("StaticForcesInv","staticForcesInv")
         return self.staticForcesInv(theta,tau)
     def InverseDynamics(self, theta, thetadot, thetadotdot, grav, wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("InverseDynamics","inverseDynamics")
         return self.inverseDynamics(theta, thetadot, thetadotdot, grav, wrenchEE)
     def InverseDynamicsEMR(self, theta, thetadot, thetadotdot, grav, wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("InverseDynamicsEMR","inverseDynamicsEMR")
         return self.inverseDynamicsEMR(theta, thetadot, thetadotdot, grav, wrenchEE)
     def InverseDynamicsE(self, theta, thetadot, thetadotdot, grav, wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("InverseDynamicsE","inverseDynamicsE")
         return self.inverseDynamicsE(theta, thetadot, thetadotdot, grav, wrenchEE)
     def InverseDynamicsC(self, theta, thetadot, thetadotdot, grav, wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("InverseDynamicsC","inverseDynamicsC")
         return self.inverseDynamicsC(theta, thetadot, thetadotdot, grav, wrenchEE)
     def ForwardDynamicsE(self, theta, thetadot, tau, grav, wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("ForwardDynamicsE","forwardDynamicsE")
         return self.forwardDynamicsE(theta, thetadot, tau, grav, wrenchEE)
     def ForwardDynamics(self, theta, thetadot, tau, grav, wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("ForwardDynamics","forwardDynamics")
         return self.forwardDynamics(theta, thetadot, tau, grav, wrenchEE)
     def MassMatrix(self, theta):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("MassMatrix","massMatrix")
         return self.massMatrix(theta)
     def CoriolisGravity(self, theta, thetadot, grav):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("CoriolisGravity","coriolisGravity")
         return self.coriolisGravity(theta, thetadot,grav)
     def EndEffectorForces(self,theta,wrenchEE):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("EndEffectorForces","endEffectorForces")
         return self.endEffectorForces(theta,wrenchEE)
     def Jacobian(self,theta):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("Jacobian","jacobian")
         return self.jacobian(theta)
     def JacobianBody(self,theta):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("JacobianBody","jacobianBody")
         return self.jacobianBody(theta)
     def JacobianLink(self,theta,i):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("JacobianLink","jacobianLink")
         return self.jacobianLink(theta,i)
     def JacobianEE(self,theta):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("JacobianEE","jacobianEE")
         return self.jacobianEE(theta)
     def JacobianEEtrans(self,theta):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("JacobianEEtrans","jacobianEEtrans")
         return self.jacobianEEtrans(theta)
     def NumericalJacobian(self, theta):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("NumericalJacobian","numericalJacobian")
         return self.numericalJacobian(theta)
     def GetManipulability(self, theta = None):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("GetManipulability","getManipulability")
         return self.getManipulability(theta)
     def Draw(self, ax):
+        """
+        Deprecated. Don't Use
+        """
         self.printOutOfDateFunction("Draw","draw")
         return self.draw(ax)
 
@@ -568,7 +649,7 @@ class Arm:
                 #Convert TwistToScrew
                 self.joint_poses_home[0:3,i] = joint_pose_temp; # For plotting purposes
         self.end_effector_home = new_end_effector_home
-        self.originalend_effector_home = self.end_effector_home.copy()
+        self.original_end_effector_home = self.end_effector_home.copy()
         if len(self.link_home_positions) != 1:
             new_link_mass_transforms = [None] * len(self.link_home_positions)
             new_link_mass_transforms[0] = self.link_home_positions[0];
@@ -781,8 +862,8 @@ class Arm:
         print(self.joint_poses_home, title = "joint_poses_home list")
         print("end_effector_home")
         print(self.end_effector_home, title = "end_effector_home")
-        print("originalend_effector_home")
-        print(self.orignalend_effector_home, title = "originalend_effector_home")
+        print("original_end_effector_home")
+        print(self.original_end_effector_home, title = "original_end_effector_home")
         print("_Mlinks")
         print(self.link_mass_transforms, title = "Link Masses")
         print("_Mhome")
@@ -845,7 +926,7 @@ class Arm:
         """
         Retstore the original End effector of the Arm
         """
-        self.end_effector_home = self.originalend_effector_home
+        self.end_effector_home = self.original_end_effector_home
 
     def getEEPos(self):
         """
