@@ -1,5 +1,6 @@
-from faser_math import *
-from faser_plotting.Draw.Draw import *
+from faser_math import tm, fmr, fsr
+from faser_plotting.Draw.Draw import DrawArm, DrawRectangle
+from faser_utils.disp.disp import disp
 import numpy as np
 import scipy as sci
 import scipy.linalg as ling
@@ -16,13 +17,15 @@ class Arm:
 
     #Converted to python - Liam
     def __init__(self, base_pos_global, screw_list, end_effector_home,
-        joint_poses_home, joint_axes = np.array([0])):
-        """"Create a serial arm
-        base_pos_global: Base transform of Arm. tmobject
-        screw_list: Screw list of arm. Nx6 matrix.
-        end_effector_home: Initial end effector of arm.
-        joint_poses_home: joint_poses_home list for arm
-        joint_axes: joint_axes list for arm
+            joint_poses_home, joint_axes = np.array([0])):
+        """"
+        Create a serial arm
+        Args:
+            base_pos_global: Base transform of Arm. tmobject
+            screw_list: Screw list of arm. Nx6 matrix.
+            end_effector_home: Initial end effector of arm.
+            joint_poses_home: joint_poses_home list for arm
+            joint_axes: joint_axes list for arm
         """
         #Configure the arm given the base screws, the base transform.
         self.cameras = []
@@ -32,9 +35,9 @@ class Arm:
         self.link_home_positions = None
         self.link_dimensions = None
         self.fail_count = 0
-        for i in range(0,screw_list.shape[1]):
-            self.screw_list_body[:,i] = (fmr.Adjoint(self.end_effector_home.inv().gTM()) @
-                self.screw_list[:,i])
+        for i in range(0, screw_list.shape[1]):
+            self.screw_list_body[:, i] = (fmr.Adjoint(self.end_effector_home.inv().gTM()) @
+                self.screw_list[:, i])
         self.reversable = False
         if joint_axes.shape[0] != 1:
             self.reversable = True
@@ -49,10 +52,11 @@ class Arm:
     def initialize(self, base_pos_global, screw_list, end_effector_home, joint_poses_home):
         """
         Helper for Serial Arm. Should be called internally
-        base_pos_global: Base transform of Arm. tmobject
-        screw_list: Screw list of arm. Nx6 matrix.
-        end_effector_home: Initial end effector of arm.
-        joint_poses_home: joint_poses_home list for arm
+        Args:
+            base_pos_global: Base transform of Arm. tmobject
+            screw_list: Screw list of arm. Nx6 matrix.
+            end_effector_home: Initial end effector of arm.
+            joint_poses_home: joint_poses_home list for arm
         """
         self.screw_list = screw_list
         self.original_screw_list_body = np.copy(screw_list)
@@ -61,15 +65,15 @@ class Arm:
         self.joint_poses_home = np.zeros((3, screw_list.shape[1]))
         self.screw_list_body = np.zeros((6, screw_list.shape[1]))
         if joint_poses_home.size > 1:
-            for i in range(0,screw_list.shape[1]):
-                self.joint_poses_home[0:3,i] = fsr.TrVec(base_pos_global,joint_poses_home[0:3,i])
+            for i in range(0, screw_list.shape[1]):
+                self.joint_poses_home[0:3, i] = fsr.TrVec(base_pos_global, joint_poses_home[0:3, i])
                 #Convert TrVec
-        for i in range(0,screw_list.shape[1]):
-            self.screw_list[:,i] = fmr.Adjoint(base_pos_global.gTM()) @ screw_list[:,i]
+        for i in range(0, screw_list.shape[1]):
+            self.screw_list[:, i] = fmr.Adjoint(base_pos_global.gTM()) @ screw_list[:, i]
             if joint_poses_home.size <= 1:
-                [w,th,joint_pose_temp,h] = fmr.TwistToScrew(self.screw_list[:,i])
+                [w, th, joint_pose_temp, h] = fmr.TwistToScrew(self.screw_list[:, i])
                 #Convert TwistToScrew
-                self.joint_poses_home[0:3,i] = joint_pose_temp; # For plotting purposes
+                self.joint_poses_home[0:3, i] = joint_pose_temp; # For plotting purposes
         self.end_effector_home_local = end_effector_home
         self.end_effector_home = base_pos_global @ end_effector_home
         self.end_effector_pos_global = self.end_effector_home.copy()
@@ -116,7 +120,7 @@ class Arm:
         """
         self.printOutOfDateFunction("TestArmValues","testArmValues")
         return self.testArmValues()
-    def SetArbitraryHome(self,theta,T):
+    def SetArbitraryHome(self, theta,T):
         """
         Deprecated. Don't Use
         """
@@ -128,18 +132,18 @@ class Arm:
         """
         self.printOutOfDateFunction("RestoreOriginalEE","restoreOriginalEE")
         return self.restoreOriginalEE()
-    def StaticForces(self,theta,wrenchEE):
+    def StaticForces(self, theta, wrenchEE):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("StaticForces","staticForces")
         return self.staticForces(theta, wrenchEE)
-    def StaticForcesInv(self,theta,tau):
+    def StaticForcesInv(self, theta, tau):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("StaticForcesInv","staticForcesInv")
-        return self.staticForcesInv(theta,tau)
+        return self.staticForcesInv(theta, tau)
     def InverseDynamics(self, theta, thetadot, thetadotdot, grav, wrenchEE):
         """
         Deprecated. Don't Use
@@ -187,38 +191,38 @@ class Arm:
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("CoriolisGravity","coriolisGravity")
-        return self.coriolisGravity(theta, thetadot,grav)
-    def EndEffectorForces(self,theta,wrenchEE):
+        return self.coriolisGravity(theta, thetadot, grav)
+    def EndEffectorForces(self, theta, wrenchEE):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("EndEffectorForces","endEffectorForces")
-        return self.endEffectorForces(theta,wrenchEE)
-    def Jacobian(self,theta):
+        return self.endEffectorForces(theta, wrenchEE)
+    def Jacobian(self, theta):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("Jacobian","jacobian")
         return self.jacobian(theta)
-    def JacobianBody(self,theta):
+    def JacobianBody(self, theta):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("JacobianBody","jacobianBody")
         return self.jacobianBody(theta)
-    def JacobianLink(self,theta,i):
+    def JacobianLink(self, theta, i):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("JacobianLink","jacobianLink")
-        return self.jacobianLink(theta,i)
-    def JacobianEE(self,theta):
+        return self.jacobianLink(theta, i)
+    def JacobianEE(self, theta):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("JacobianEE","jacobianEE")
         return self.jacobianEE(theta)
-    def JacobianEEtrans(self,theta):
+    def JacobianEEtrans(self, theta):
         """
         Deprecated. Don't Use
         """
@@ -278,12 +282,12 @@ class Arm:
             theta = self.thetaProtector(theta)
         self._theta = fsr.AngleMod(theta.reshape(len(theta)))
         end_effector_transform = tm(fmr.FKinSpace(
-            self.end_effector_home.gTM(),self.screw_list,theta))
+            self.end_effector_home.gTM(), self.screw_list, theta))
         self.end_effector_pos_global = end_effector_transform
         return end_effector_transform
 
     #Converted to python - Liam
-    def FKLink(self,theta,i, protect = False):
+    def FKLink(self, theta, i, protect = False):
         """
         Calculates the position of a given joint provided a theta list
         Args:
@@ -296,7 +300,7 @@ class Arm:
             print("Unsuitable Thetas")
             theta = self.thetaProtector(theta)
         end_effector_pos =  tm(fmr.FKinSpace(self.link_home_positions[i].TM,
-            self.screw_list[0:6,0:i],theta[0:i]))
+            self.screw_list[0:6,0:i], theta[0:i]))
         return end_effector_pos
 
     #Converted to python - Liam
@@ -316,9 +320,9 @@ class Arm:
         if theta_init.size == 1:
             theta_init = fsr.AngleMod(self._theta.reshape(len(self._theta)))
         if not protect:
-            return self.constrainedIK(T,theta_init,check,level)
-        theta,success = fmr.IKinSpace(self.screw_list,self.end_effector_home.gTM(),
-            T.gTM(),theta_init,0.00000001,0.00000001)
+            return self.constrainedIK(T, theta_init, check, level)
+        theta, success = fmr.IKinSpace(self.screw_list, self.end_effector_home.gTM(),
+            T.gTM(), theta_init,0.00000001,0.00000001)
         theta = fsr.AngleMod(theta)
         self._theta = theta
         if success:
@@ -330,8 +334,8 @@ class Arm:
                     theta_temp = np.zeros((len(self._theta)))
                     for j in range(len(theta_temp)):
                         theta_temp[j] = random.uniform(-np.pi, np.pi)
-                    theta, success = fmr.IKinSpace(self.screw_list,self.end_effector_home.gTM(),
-                        T.gTM(),theta_init,0.00000001,0.00000001)
+                    theta, success = fmr.IKinSpace(self.screw_list, self.end_effector_home.gTM(),
+                        T.gTM(), theta_init,0.00000001,0.00000001)
                     i = i + 1
                 if success:
                     self.end_effector_pos_global = T
@@ -493,7 +497,7 @@ class Arm:
         self._theta = force_thetas[index]
         return force_thetas[index]
 
-    def IKMotion(self,T,theta_init):
+    def IKMotion(self, T, theta_init):
         """
         This calculates IK by numerically moving the end effector
         from the pose defined by theta_init in the direction of the desired
@@ -513,8 +517,8 @@ class Arm:
         start_direction = T @ start_transform.inv()
         twist_direction = fsr.TwistFromTransform(start_direction)
 
-        #[t,thall] = ode15s(@(t,x)(pinv(self.jacobian(x))*twist_direction),[0 1],theta_init);
-        res = lambda t, x: linalg.pinv(self.jacobian(x))*twist_direction
+        #[t, thall] = ode15s(@(t, x)(pinv(self.jacobian(x))*twist_direction),[0 1], theta_init);
+        res = lambda t, x: np.linalg.pinv(self.jacobian(x))*twist_direction
         t, thall = sci.integrate.ode(res).set_integrator('vode', method='bdf', order=15)
 
         theta = thall[-1,:].conj().T
@@ -522,9 +526,9 @@ class Arm:
             success = 1
         else:
             success = 0
-        return (theta, success, t, thall)
+        return theta, success, t, thall
 
-    def IKFree(self,T,theta_init,inds):
+    def IKFree(self,T, theta_init, inds):
         """
         Only allow theta_init(freeinds) to be varied
         Method not covered in Lynch.
@@ -542,19 +546,19 @@ class Arm:
             thall: integration results
         """
         #free_thetas = fsolve(@(x)(obj.FK(SetElements(theta_init,
-            #freeinds,x))-T),theta_init(freeinds))
-        res = lambda x : fsr.TAAtoTM(self.FK(fsr.SetElements(theta_init,inds,x))-T)
+            #freeinds, x))-T), theta_init(freeinds))
+        res = lambda x : fsr.TAAtoTM(self.FK(fsr.SetElements(theta_init, inds, x))-T)
         #Use newton_krylov instead of fsolve
-        free_thetas = sci.optimize.fsolve(res,theta_init[inds])
+        free_thetas = sci.optimize.fsolve(res, theta_init[inds])
         # free_thetas = fsolve(@(x)(self.FK(SetElements(theta_init,
-            #freeinds,x))-T),theta_init(freeinds));
+            #freeinds, x))-T), theta_init(freeinds));
         theta = np.squeeze(theta_init);
         theta[inds] = np.squeeze(free_thetas);
         if fsr.Norm(T-self.FK(theta)) < 0.001:
             success = 1;
         else:
             success = 0;
-        return (theta,success)
+        return (theta, success)
 
 
     """
@@ -598,30 +602,30 @@ class Arm:
         new_joint_axes = np.copy(self.joint_axes)
         new_joint_poses_home = np.copy(self.original_joint_poses_home)
         for i in range(new_joint_axes.shape[1]):
-            new_joint_axes[0:3,i] = self.joint_axes[0:3, new_joint_axes.shape[1] - 1 - i]
+            new_joint_axes[0:3, i] = self.joint_axes[0:3, new_joint_axes.shape[1] - 1 - i]
         differences = np.zeros((3, new_joint_poses_home.shape[1]-1))
         for i in range(new_joint_poses_home.shape[1]-1):
-            differences[0:3,i] = (self.original_joint_poses_home[0:3,(
+            differences[0:3, i] = (self.original_joint_poses_home[0:3,(
                 self.original_joint_poses_home.shape[1] - 1 - i)] -
                 self.original_joint_poses_home[0:3,(
                 self.original_joint_poses_home.shape[1] - 2 - i)])
         #print(differences, "differences")
         for i in range(new_joint_poses_home.shape[1]):
             if i == 0:
-                new_joint_poses_home[0:3,i] = (self.original_joint_poses_home[0:3, (
-                    self.original_joint_poses_home.shape[1] - 1)] - np.sum(differences,axis = 1))
+                new_joint_poses_home[0:3, i] = (self.original_joint_poses_home[0:3, (
+                    self.original_joint_poses_home.shape[1] - 1)] - np.sum(differences, axis = 1))
             else:
                 new_joint_poses_home[0:3, i] = (new_joint_poses_home[0:3, i -1] +
                     differences[0:3, i - 1])
         for i in range(new_screw_list.shape[1]):
-            new_screw_list[0:6,i] = np.hstack((new_joint_axes[0:3,i],
-                np.cross(new_joint_poses_home[0:3,i],new_joint_axes[0:3,i])))
+            new_screw_list[0:6, i] = np.hstack((new_joint_axes[0:3, i],
+                np.cross(new_joint_poses_home[0:3, i], new_joint_axes[0:3, i])))
         new_thetas = (new_thetas @
             tm([0, 0, 0, 0, np.pi, 0]) @ tm([0, 0, 0, 0, 0, np.pi]))
         if np.size(self.link_dimensions) != 1:
             new_link_dimensions = np.zeros((self.link_dimensions.shape))
             for i in range(self.link_dimensions.shape[1]):
-                new_link_dimensions[0:3,i] = (
+                new_link_dimensions[0:3, i] = (
                     self.link_dimensions[0:3,(self.link_dimensions.shape[1] - i -1)])
             self.link_dimensions = new_link_dimensions
         if len(self.link_home_positions) != 1:
@@ -639,15 +643,15 @@ class Arm:
         self.joint_poses_home = np.zeros((3, new_screw_list.shape[1]))
         self.screw_list_body = np.zeros((6, new_screw_list.shape[1]))
         if new_joint_poses_home.size > 1:
-            for i in range(0,new_screw_list.shape[1]):
-                self.joint_poses_home[0:3,i] = fsr.TrVec(new_thetas, new_joint_poses_home[0:3,i])
+            for i in range(0, new_screw_list.shape[1]):
+                self.joint_poses_home[0:3, i] = fsr.TrVec(new_thetas, new_joint_poses_home[0:3, i])
                 #Convert TrVec
-        for i in range(0,new_screw_list.shape[1]):
-            self.screw_list[:,i] = fmr.Adjoint(new_thetas.gTM()) @ new_screw_list[:,i]
+        for i in range(0, new_screw_list.shape[1]):
+            self.screw_list[:, i] = fmr.Adjoint(new_thetas.gTM()) @ new_screw_list[:, i]
             if new_joint_poses_home.size <= 1:
-                [w,th,joint_pose_temp,h] = fmr.TwistToScrew(self.screw_list[:,i])
+                [w, th, joint_pose_temp, h] = fmr.TwistToScrew(self.screw_list[:, i])
                 #Convert TwistToScrew
-                self.joint_poses_home[0:3,i] = joint_pose_temp; # For plotting purposes
+                self.joint_poses_home[0:3, i] = joint_pose_temp; # For plotting purposes
         self.end_effector_home = new_end_effector_home
         self.original_end_effector_home = self.end_effector_home.copy()
         if len(self.link_home_positions) != 1:
@@ -660,9 +664,9 @@ class Arm:
                 self.link_home_positions[5].inv() @ self.end_effector_home)
             self.link_mass_transforms = new_link_mass_transforms
         self.box_spatial_links = 0
-        for i in range(0,new_screw_list.shape[1]):
-            self.screw_list_body[:,i] = (
-                fmr.Adjoint(self.end_effector_home.inv().gTM()) @ self.screw_list[:,i])
+        for i in range(0, new_screw_list.shape[1]):
+            self.screw_list_body[:, i] = (
+                fmr.Adjoint(self.end_effector_home.inv().gTM()) @ self.screw_list[:, i])
         #print(new_theta)
         self.FK(new_theta)
 
@@ -706,7 +710,7 @@ class Arm:
                     satisfied = False
             initial = fsr.CloseGap(initial, target, delt)
             theta_list.append(np.copy(self._theta))
-            self.IK(initial,self._theta)
+            self.IK(initial, self._theta)
         self.IK(target, self._theta)
         theta_list.append(self._theta)
         if (execute == False):
@@ -769,7 +773,7 @@ class Arm:
                         done = False
                         pose_adjust[2] = .01
                 start_pos =start_pos @ pose_adjust
-                theta = self.IK(st, self._theta)
+                theta = self.IK(start_pos, self._theta)
                 self.updateCams()
                 if fig != 0:
                     ax = plt.axes(projection = '3d')
@@ -805,11 +809,11 @@ class Arm:
             fsr.Norm(previous_end_effector_pos[0:3,3]-goal_position[0:3,3]))
         scale = Kp @ error_ee_to_goal + Kd @ min(0, delt_distance_to_goal)
 
-        twist = self.TwistSpaceToGoalEE(theta,goal_position)
+        twist = self.TwistSpaceToGoalEE(theta, goal_position)
         twist_norm = fsr.TwistNorm(twist)
         normalized_twist = twist/twist_norm
-        theta_dot = self.ThetadotSpace(theta,normalized_twist)
-        scaled_theta_dot = max_theta_dot/max(math.abs(theta_dot)) @ theta_dot @ scale
+        theta_dot = self.ThetadotSpace(theta, normalized_twist)
+        scaled_theta_dot = max_theta_dot/max(abs(theta_dot)) @ theta_dot @ scale
         return scaled_theta_dot
 
 
@@ -885,20 +889,20 @@ class Arm:
 
         end_effector_home = self.base_pos_global
         end_effector_transform = tm(fmr.FKinSpace(end_effector_home.gTM(),
-            self.screw_list[0:6,0:0],self._theta[0:0]))
+            self.screw_list[0:6,0:0], self._theta[0:0]))
         #print(end_effector_transform, "EEPOS")
         joint_pose_list[0] = end_effector_transform
         for i in range((self.screw_list.shape[1])):
             if self.link_home_positions == None:
                 temp_tm = tm()
-                temp_tm[0:3,0] = self.original_joint_poses_home[0:3,i]
-                end_effector_home = self.base_pos_global @ t
+                temp_tm[0:3,0] = self.original_joint_poses_home[0:3, i]
+                end_effector_home = self.base_pos_global @ temp_tm
             else:
                 end_effector_home = self.link_home_positions[i]
             #print(end_effector_home, "end_effector_home" + str(i + 1))
             #print(self._theta[0:i+1])
             end_effector_transform = tm(fmr.FKinSpace(end_effector_home.gTM(),
-                self.screw_list[0:6,0:i],self._theta[0:i]))
+                self.screw_list[0:6,0:i], self._theta[0:i]))
             #print(end_effector_transform, "EEPOS")
             joint_pose_list[i] = end_effector_transform
         if dimensions.shape[0] > self.screw_list.shape[1]:
@@ -907,7 +911,7 @@ class Arm:
             joint_pose_list[len(joint_pose_list) - 1] = self.FK(self._theta)
         return joint_pose_list
 
-    def setArbitraryHome(self,theta,T):
+    def setArbitraryHome(self, theta,T):
         """
         #  Given a pose and some T in the space frame, find out where
         #  that T is in the EE frame, then find the home pose for
@@ -919,7 +923,7 @@ class Arm:
 
         end_effector_temp = self.FK(theta)
         ee_to_new = np.cross(np.inv(end_effector_temp),T)
-        self.end_effector_home = np.cross(self.end_effector_home,ee_to_new)
+        self.end_effector_home = np.cross(self.end_effector_home, ee_to_new)
 
     #Converted to Python - Joshua
     def restoreOriginalEE(self):
@@ -947,7 +951,7 @@ class Arm:
                                                                |___/
     """
 
-    def staticForces(self,theta,end_effector_wrench):
+    def staticForces(self, theta, end_effector_wrench):
         """
         Calculate forces on each link of the serial arm
         Args:
@@ -965,7 +969,7 @@ class Arm:
     #    wrenchS = fmr.Adjoint(ling.inv(end_effector_temp)).conj().T @ end_effector_wrench
     #    return self.jacobian(theta).conj().T @ wrenchS
 
-    def staticForcesInv(self,theta,tau):
+    def staticForcesInv(self, theta, tau):
         """
         Given a position on the arm and forces for each joint,
         calculate the wrench on the end effector
@@ -1039,56 +1043,56 @@ class Arm:
         vel_dot = np.zeros((self.screw_list.shape))
 
         for i in range(self.screw_list.shape[1]):
-            #A[0:6,i] =(fmr.Adjoint(ling.inv(self.link_home_positions[i,:,:].reshape((4,4)))) @
-            #   self.screw_list[0:6,i].reshape((6,1))).reshape((6))
-            A[0:6,i] = (self.link_home_positions[i].inv().Adjoint() @
-                self.screw_list[0:6,i]).reshape((6))
+            #A[0:6, i] =(fmr.Adjoint(ling.inv(self.link_home_positions[i,:,:].reshape((4,4)))) @
+            #   self.screw_list[0:6, i].reshape((6,1))).reshape((6))
+            A[0:6, i] = (self.link_home_positions[i].inv().Adjoint() @
+                self.screw_list[0:6, i]).reshape((6))
 
             #Ti_im1 =
-            #   (fmr.MatrixExp6(fmr.VecTose3(A[0:6,i]) * theta[i]) @
+            #   (fmr.MatrixExp6(fmr.VecTose3(A[0:6, i]) * theta[i]) @
             #   ling.inv(self.link_mass_transforms[i,:,:])
-            Ti_im1 = (fmr.MatrixExp6(fmr.VecTose3(A[0:6,i]) * theta[i]) @
+            Ti_im1 = (fmr.MatrixExp6(fmr.VecTose3(A[0:6, i]) * theta[i]) @
                 self.link_mass_transforms[i].inv().TM)
             if i > 0:
-                V[0:6,i] = (A[0:6,i].reshape((6,1)) * theta_dot[i] +
-                    fmr.Adjoint(Ti_im1) @ V[0:6,i-1].reshape((6,1))).reshape((6))
-                #print((((A[0:6,i] * theta_dot_dot[i]).reshape((6,1)) + (fmr.Adjoint(Ti_im1) @
-                #   vel_dot[0:6,i-1]).reshape((6,1)) + (fmr.ad(V[0:6,i]) @ A[0:6,i] *
+                V[0:6, i] = (A[0:6, i].reshape((6,1)) * theta_dot[i] +
+                    fmr.Adjoint(Ti_im1) @ V[0:6, i-1].reshape((6,1))).reshape((6))
+                #print((((A[0:6, i] * theta_dot_dot[i]).reshape((6,1)) + (fmr.Adjoint(Ti_im1) @
+                #   vel_dot[0:6, i-1]).reshape((6,1)) + (fmr.ad(V[0:6, i]) @ A[0:6, i] *
                 #   theta_dot[i]).reshape((6,1))).reshape((6,1)), "vcomp"))
-                vel_dot[0:6,i] = (((A[0:6,i] * theta_dot_dot[i]).reshape((6,1)) +
-                    (fmr.Adjoint(Ti_im1) @ vel_dot[0:6,i-1]).reshape((6,1)) +
-                    (fmr.ad(V[0:6,i]) @ A[0:6,i] * theta_dot[i]).reshape((6,1))).reshape((6)))
+                vel_dot[0:6, i] = (((A[0:6, i] * theta_dot_dot[i]).reshape((6,1)) +
+                    (fmr.Adjoint(Ti_im1) @ vel_dot[0:6, i-1]).reshape((6,1)) +
+                    (fmr.ad(V[0:6, i]) @ A[0:6, i] * theta_dot[i]).reshape((6,1))).reshape((6)))
             else:
-                V[0:6,i] = ((A[0:6,i].reshape((6,1)) * theta_dot[i] +
+                V[0:6, i] = ((A[0:6, i].reshape((6,1)) * theta_dot[i] +
                     fmr.Adjoint(Ti_im1) @ np.zeros((6,1))).reshape((6)))
-                vel_dot[0:6,i] = (((A[0:6,i] * theta_dot_dot[i]).reshape((6,1)) +
+                vel_dot[0:6, i] = (((A[0:6, i] * theta_dot_dot[i]).reshape((6,1)) +
                     (fmr.Adjoint(Ti_im1) @ np.vstack((np.array([[0],[0],[0]]),
                     grav))).reshape((6,1)) +
-                    (fmr.ad(V[0:6,i]) @ A[0:6,i] * theta_dot[i]).reshape((6,1))).reshape((6)))
+                    (fmr.ad(V[0:6, i]) @ A[0:6, i] * theta_dot[i]).reshape((6,1))).reshape((6)))
         F = np.zeros((self.screw_list.shape))
         tau = np.zeros((theta.size,1))
         for i in range(self.screw_list.shape[1]-1,-1,-1):
             if i == self.screw_list.shape[1]-1:
                 #continue
                 Tip1_i = self.link_mass_transforms[i+1].inv().TM
-                F[0:6,i] = (fmr.Adjoint(Tip1_i).conj().T @ end_effector_wrench +
-                    self.box_spatial_links[i,:,:] @ vel_dot[0:6,i] - fmr.ad(V[0:6,i]).conj().T @
-                    self.box_spatial_links[i,:,:] @ V[0:6,i])
+                F[0:6, i] = (fmr.Adjoint(Tip1_i).conj().T @ end_effector_wrench +
+                    self.box_spatial_links[i,:,:] @ vel_dot[0:6, i] - fmr.ad(V[0:6, i]).conj().T @
+                    self.box_spatial_links[i,:,:] @ V[0:6, i])
             else:
-                #print(( fmr.MatrixExp6(-fmr.VecTose3((A[0:6,i+1].reshape((6,1))) *
+                #print(( fmr.MatrixExp6(-fmr.VecTose3((A[0:6, i+1].reshape((6,1))) *
                 #   theta(i + 1))) @ ling.inv(self.link_mass_transforms[i+1,:,:]), "problem"))
-                Tip1_i = (fmr.MatrixExp6(-fmr.VecTose3(A[0:6,i+1]) * theta[i + 1]) @
+                Tip1_i = (fmr.MatrixExp6(-fmr.VecTose3(A[0:6, i+1]) * theta[i + 1]) @
                     self.link_mass_transforms[i+1].inv().TM)
-                F[0:6,i] = (fmr.Adjoint(Tip1_i).conj().T @ F[0:6,i+1] +
-                    self.box_spatial_links[i,:,:] @ vel_dot[0:6,i] -
-                    fmr.ad(V[0:6,i]).conj().T @ self.box_spatial_links[i,:,:] @ V[0:6,i])
+                F[0:6, i] = (fmr.Adjoint(Tip1_i).conj().T @ F[0:6, i+1] +
+                    self.box_spatial_links[i,:,:] @ vel_dot[0:6, i] -
+                    fmr.ad(V[0:6, i]).conj().T @ self.box_spatial_links[i,:,:] @ V[0:6, i])
 
-            tau[i] = F[0:6,i].conj().T @ A[0:6,i]
+            tau[i] = F[0:6, i].conj().T @ A[0:6, i]
         return tau, A, V, vel_dot, F
 
     def inverseDynamicsC(self, theta, theta_dot, theta_dot_dot, grav, end_effector_wrench):
         """
-        Inverse dynamics
+        Inverse dynamics Implementation of algorithm in Lynch 8.4
         Args:
             theta: theta
             theta_dot: theta 1st deriviative
@@ -1106,33 +1110,33 @@ class Arm:
         A = np.zeros((6*n, n))
         G = np.zeros((6*n, n))
         for i in range (n):
-            A[(i-1)*6+1:(i-1)*6+6,i] = (
-                fmr.Adjoint(ling.inv(self.link_home_positions[i,:,:])) @ self.screw_list[0:6,i])
+            A[(i-1)*6+1:(i-1)*6+6, i] = (
+                fmr.Adjoint(ling.inv(self.link_home_positions[i,:,:])) @ self.screw_list[0:6, i])
             G[(i-1)*6+1:(i-1)*6+6,(i-1)*6+1:(i-1)*6+7] = self.box_spatial_links[i,:,:]
         joint_axes = np.zeros((6*n, 6*n))
         Vbase = np.zeros((6*n, 1))
         T10 = ling.inv(self.FKLink(theta,1))
         vel_dot_base = (
-            np.hstack((self.Adjoint(T10) @ np.array([[0],[0],[0],[-grav]]),np.zeros((5*n,1)))))
+            np.hstack((self.Adjoint(T10) @ np.array([[0],[0],[0],[-grav]]), np.zeros((5*n,1)))))
         Ttipend = ling.inv(self.FK(theta)) @ self.FKLink(theta, n)
         Ftip = np.vstack((np.zeros((5*n,1)), fmr.Adjoint(Ttipend).conj().T @ end_effector_wrench))
-        for i in range (1,n):
-            Ti_im1 = ling.inv(self.FKlink(theta,i)) @ self.FKLink(theta,i-1)
-            W[(i-1) * 6 + 1:(i-1) *6 + 6, (i-2)*6+1:(i-2)*6+6] = fmr.Adjoint(Ti_im1)
-        L = ling.inv(np.identity((6*n))-W)
+        for i in range (1, n):
+            Ti_im1 = ling.inv(self.FKlink(theta, i)) @ self.FKLink(theta, i-1)
+            joint_axes[(i-1) * 6 + 1:(i-1) *6 + 6, (i-2)*6+1:(i-2)*6+6] = fmr.Adjoint(Ti_im1)
+        L = ling.inv(np.identity((6*n))-joint_axes)
         V = L @ (A @ theta_dot + Vbase)
         adV = np.zeros((6*n,6*n))
         adAthd = np.zeros((6*n,6*n))
-        for i in range(1,n):
+        for i in range(1, n):
             adV[(i-1) * 6 + 1:(i-1) * 6+6,(i-1)*6+1:(i-1)*6+6] = fmr.ad(V[(i-1)*6+1:(i-1)*6+6,0])
             adAthd[(i-1)*6+1:(i-1) * 6 + 6, (i - 1) * 6 + 1 : (i - 1) * 6 + 6] = (
                 fmr.ad(theta_dot[i] @ A[(i - 1) * 6 + 1 : (i - 1)* 6 + 6, i]))
-        vel_dot = L @ (A @ theta_dot_dot - adAthd @ W @ V - adAthd @ Vbase @vel_dot_base)
+        vel_dot = L @ (A @ theta_dot_dot - adAthd @ joint_axes @ V - adAthd @ Vbase @vel_dot_base)
         F = L.conj().T @ (G @ vel_dot - adV.conj().T @ G @ V + Ftip)
         tau = A.conj().T @ F
         M = A.conj().T @ L.conj().T @ G @ L @ A
 
-        return tau, M, c, G, ee
+        return tau, M, G
 
     def forwardDynamicsE(self, theta, theta_dot, tau, grav, end_effector_wrench):
         """
@@ -1149,9 +1153,9 @@ class Arm:
             h: todo
             ee: todo
         """
-        M = self.MasssMatrix(theta)
+        M = self.massMatrix(theta)
         h = self.coriolisGravity(theta, theta_dot, grav)
-        ee = self.endEffectorForces(theta,end_effector_wrench)
+        ee = self.endEffectorForces(theta, end_effector_wrench)
         theta_dot_dot = ling.inv(M) @ (tau-h-ee)
 
         return theta_dot_dot, M, h, ee
@@ -1183,11 +1187,11 @@ class Arm:
         #Debugged - Liam 8/4/19
         M = np.zeros(theta.size)
         for i in range(theta.size):
-            Ji = self.jacobianLink(theta,i)
+            Ji = self.jacobianLink(theta, i)
             jt = Ji.conj().T @ self.box_spatial_links[i,:,:] @ Ji
             #M = M + jt
         #print(M, "M1")
-        #print(fmr.massMatrix(theta,self.link_mass_transforms,
+        #print(fmr.massMatrix(theta, self.link_mass_transforms,
         #    self.box_spatial_links, self.screw_list), "Masses")
         return M
 
@@ -1201,10 +1205,10 @@ class Arm:
         Returns:
             coriolisGravity
         """
-        h = obj.inverseDynamicsE(theta,theta_dot,0*theta,grav,np.zeros((6,1)))
+        h = self.inverseDynamicsE(theta, theta_dot, 0*theta, grav, np.zeros((6,1)))
         return h
 
-    def endEffectorForces(self,theta,end_effector_wrench):
+    def endEffectorForces(self, theta, end_effector_wrench):
         """
         Calculates forces at the end effector
         Args:
@@ -1214,7 +1218,7 @@ class Arm:
             forces at the end effector
         """
         grav = np.array([[0.0],[0.0],[-9.81]])
-        return self.inverseDynamicsE(theta,0*theta,0*theta,np.zeros((3,1)),end_effector_wrench)
+        return self.inverseDynamicsE(theta,0*theta,0*theta, np.zeros((3,1)), end_effector_wrench)
 
 
 
@@ -1229,7 +1233,7 @@ class Arm:
     """
 
     #Converted to Python - Joshua
-    def jacobian(self,theta):
+    def jacobian(self, theta):
         """
         Calculates Space Jacobian for given configuration
         Args:
@@ -1237,10 +1241,10 @@ class Arm:
         Returns:
             jacobian
         """
-        return fmr.JacobianSpace(self.screw_list,theta)
+        return fmr.JacobianSpace(self.screw_list, theta)
 
     #Converted to Python - Joshua
-    def jacobianBody(self,theta):
+    def jacobianBody(self, theta):
         """
         Calculates Body Jacobian for given configuration
         Args:
@@ -1248,11 +1252,11 @@ class Arm:
         Returns:
             jacobian
         """
-        return fmr.JacobianBody(self.screw_list_body,theta)
+        return fmr.JacobianBody(self.screw_list_body, theta)
 
     #Converted to Python - Joshua
     #Fixed Bugs - Liam
-    def jacobianLink(self,theta,i):
+    def jacobianLink(self, theta, i):
         """
         Calculates Space Jacobian for given configuration link
         Args:
@@ -1261,13 +1265,13 @@ class Arm:
         Returns:
             jacobian
         """
-        t_ad = self.FKLink(theta,i).inv().Adjoint()
+        t_ad = self.FKLink(theta, i).inv().Adjoint()
         t_js = fmr.JacobianSpace(self.screw_list[0:6,0:i], theta[0:i])
-        t_z = np.zeros((6,len(theta) - 1))
+        t_z = np.zeros((6, len(theta) - 1))
         t_mt = t_ad @ t_js
         return np.hstack((t_mt, t_z))
 
-    def jacobianEE(self,theta):
+    def jacobianEE(self, theta):
         """
         Calculates End Effector Jacobian for given configuration
         Args:
@@ -1279,7 +1283,7 @@ class Arm:
         return (self.FK(theta).inv() @ jacobian).Adjoint()
         #return fmr.Adjoint()
 
-    def jacobianEEtrans(self,theta):
+    def jacobianEEtrans(self, theta):
         """
         Calculates Jacobian for given configuration
         Args:
@@ -1300,12 +1304,12 @@ class Arm:
         Returns:
             jacobian
         """
-        jacobian = np.zeros((6,theta.size))
+        jacobian = np.zeros((6, theta.size))
         temp = lambda x : np.reshape(self.FK(x),((1, 16)))
-        numerical_jacobian = fsr.NumJac(temp,theta,0.006)
-        for i in range(0,np.size(theta)):
-            jacobian[0:6,i] = (fmr.se3ToVec(ling.inv(self.FK(theta).conj().T) @
-                np.reshape(numerical_jacobian[:,i],((4, 4))).conj().T))
+        numerical_jacobian = fsr.NumJac(temp, theta,0.006)
+        for i in range(0, np.size(theta)):
+            jacobian[0:6, i] = (fmr.se3ToVec(ling.inv(self.FK(theta).conj().T) @
+                np.reshape(numerical_jacobian[:, i],((4, 4))).conj().T))
 
         return jacobian
 

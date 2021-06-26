@@ -1,5 +1,5 @@
-from faser_math import *
-from faser_utils.disp.disp import *
+from faser_math import tm, fmr, fsr
+from faser_utils.disp.disp import disp
 import numpy as np
 import scipy as sci
 import scipy.linalg as ling
@@ -19,18 +19,17 @@ class SP:
         Initializes a new Stewart Platform Object
 
         Args:
-            bottom_joints (type): Description of parameter `bottom_joints`.
-            top_joints (type): Description of parameter `top_joints`.
-            bT (type): Description of parameter `bT`.
-            tT (type): Description of parameter `tT`.
-            leg_ext_min (type): Description of parameter `leg_ext_min`.
-            leg_ext_max (type): Description of parameter `leg_ext_max`.
-            bottom_plate_thickness (type): Description of parameter `bottom_plate_thickness`.
-            top_plate_thickness (type): Description of parameter `top_plate_thickness`.
-            name (type): Description of parameter `name`.
-
+            bottom_joints (ndarray): Bottom joint positions of the stewart platform
+            top_joints (ndarray): Top joint positions of the stewart platform
+            bT (tm): bottom plate position
+            tT (tm): top plate position
+            leg_ext_min (float): minimum leg ext limit
+            leg_ext_max (float): maximum leg ext limit
+            bottom_plate_thickness (float): bottom plate thickness
+            top_plate_thickness (float): top plate thickness
+            name (string): name of the sp
         Returns:
-            type: Description of returned object.
+            SP: sp model object
 
         """
         self.bottom_joints = np.copy(bottom_joints)
@@ -151,15 +150,12 @@ class SP:
         """
         Set masses for each SP in the Assembler, note that because central platforms
         share plates, these weights are halved with respect to end plates
-        Takes in plate_mass_general, actuator shaft mass, actuator bottom mass,
-        and acceleration due to gravity
-
         Args:
-            plate_mass_general (type): Description of parameter `plate_mass_general`.
-            act_shaft_mass (type): Description of parameter `act_shaft_mass`.
-            act_motor_mass (type): Description of parameter `act_motor_mass`.
-            grav (type): Description of parameter `grav`.
-            top_plate_mass (type): Description of parameter `top_plate_mass`.
+            plate_mass_general (float): mass of bottom plate (both if top is not specified) (kg)
+            act_shaft_mass (float): mass of actuator shaft (kg)
+            act_motor_mass (float): mass of actuator motor (kg)
+            grav (float):  [Optional, default 9.81] acceleration due to gravity
+            top_plate_mass (float): [Optional, default 0] top plate mass (kg)
 
         Returns:
             type: Description of returned object.
@@ -182,7 +178,7 @@ class SP:
         """
         Sets Gravity
         Args:
-            grav (float): Description of parameter `grav`.
+            grav (float): Acceleration due to gravity
         Returns:
             None: None
         """
@@ -190,39 +186,28 @@ class SP:
 
     def setCOG(self, motor_grav_center, shaft_grav_center):
         """
-
+        Sets the centers of gravity for actuator components
         Args:
-            motor_grav_center (type): Description of parameter `motor_grav_center`.
-            shaft_grav_center (type): Description of parameter `shaft_grav_center`.
-
-        Returns:
-            type: Description of returned object.
-
+            motor_grav_center (float): distance from top of actuator to actuator shaft COG
+            shaft_grav_center (float): distance from bottom of actuator to actuator motor COG
         """
         self.act_shaft_grav_center = shaft_grav_center
         self.act_motor_grav_center = motor_grav_center
 
     def setMaxAngleDev(self, max_angle_dev = 55):
         """
-
+        Set the maximum angle joints can deflect before failure
         Args:
-            max_angle_dev (type): Description of parameter `max_angle_dev`.
-
-        Returns:
-            type: Description of returned object.
-
+            max_angle_dev (float): maximum deflection angle (degrees)
         """
         self.joint_deflection_max = max_angle_dev*np.pi/180
 
     def setMaxPlateRotation(self, max_plate_rotation = 60):
         """
+        Set the maximum angle the plate can rotate before failure
 
         Args:
-            max_plate_rotation (type): Description of parameter `max_plate_rotation`.
-
-        Returns:
-            type: Description of returned object.
-
+            max_plate_rotation (Float): Maximum angle before plate rotation failure (degrees)
         """
         self.plate_rotation_limit = np.cos(max_plate_rotation * np.pi / 180)
 
@@ -231,10 +216,10 @@ class SP:
         """
 
         Args:
-            outer_top_radius (type): Description of parameter `outer_top_radius`.
-            outer_bottom_radius (type): Description of parameter `outer_bottom_radius`.
-            act_shaft_radius (type): Description of parameter `act_shaft_radius`.
-            act_motor_radius (type): Description of parameter `act_motor_radius`.
+            outer_top_radius (Float): Description of parameter `outer_top_radius`.
+            outer_bottom_radius (Float): Description of parameter `outer_bottom_radius`.
+            act_shaft_radius (Float): Description of parameter `act_shaft_radius`.
+            act_motor_radius (Float): Description of parameter `act_motor_radius`.
 
         Returns:
             type: Description of returned object.
@@ -249,8 +234,8 @@ class SP:
         """
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
 
         Returns:
             type: Description of returned object.
@@ -332,9 +317,9 @@ class SP:
         """
 
         Args:
-            point_1 (type): Description of parameter `point_1`.
-            point_2 (type): Description of parameter `point_2`.
-            distance (type): Description of parameter `distance`.
+            point_1 (tm): Description of parameter `point_1`.
+            point_2 (tm): Description of parameter `point_2`.
+            distance (Float): Description of parameter `distance`.
 
         Returns:
             type: Description of returned object.
@@ -342,8 +327,8 @@ class SP:
         """
         v1 = np.array([point_1[0], point_1[1], point_1[2]])
         unit_b = (np.array([point_2[0], point_2[1], point_2[2]]) - v1)
-        unit = unit_b / ling.norm(unitb)
-        pos = v1 + (unit * dist)
+        unit = unit_b / ling.norm(unit_b)
+        pos = v1 + (unit * distance)
         return tm([pos[0], pos[1], pos[2], 0, 0, 0])
 
     def getActuatorLoc(self, num, type = 'm'):
@@ -354,8 +339,8 @@ class SP:
         t for actuator top position
 
         Args:
-            num (type): Description of parameter `num`.
-            type (type): Description of parameter `type`.
+            num (Int): Description of parameter `num`.
+            type (Char): Description of parameter `type`.
 
         Returns:
             type: Description of returned object.
@@ -386,14 +371,14 @@ class SP:
         """
 
         Args:
-            rot (type): Description of parameter `rot`.
+            rot (Float): Description of parameter `rot`.
 
         Returns:
             type: Description of returned object.
 
         """
         old_base_pos = self.getBottomT()
-        sp.move(tm())
+        self.move(tm())
         current_top_pos = self.getTopT()
         top_joints_copy = self.top_joints_space.copy()
         bottom_joints_copy = self.bottom_joints_space.copy()
@@ -418,8 +403,8 @@ class SP:
         """
 
         Args:
-            goal (type): Description of parameter `goal`.
-            steps (type): Description of parameter `steps`.
+            goal (tm): Description of parameter `goal`.
+            steps (Int): Description of parameter `steps`.
 
         Returns:
             type: Description of returned object.
@@ -431,10 +416,10 @@ class SP:
         """
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            protect (type): Description of parameter `protect`.
-            dir (type): Description of parameter `dir`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            protect (Bool): Description of parameter `protect`.
+            dir (Int): Description of parameter `dir`.
 
         Returns:
             type: Description of returned object.
@@ -463,10 +448,10 @@ class SP:
         Takes in bottom plate transform, top plate transform, protection paramter, and direction
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            protect (type): Description of parameter `protect`.
-            dir (type): Description of parameter `dir`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            protect (Bool): Description of parameter `protect`.
+            dir (Int): Description of parameter `dir`.
 
         Returns:
             type: Description of returned object.
@@ -494,10 +479,10 @@ class SP:
         FK Host Function
 
         Args:
-            L (type): Description of parameter `L`.
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            reverse (type): Description of parameter `reverse`.
-            protect (type): Description of parameter `protect`.
+            L (ndarray(Float)): Description of parameter `L`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            reverse (Bool): Description of parameter `reverse`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -529,10 +514,10 @@ class SP:
         Use Python's Scipy module to calculate forward kinematics. Takes in length list,
         optionally bottom position, reverse parameter, and protection
         Args:
-            L (type): Description of parameter `L`.
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            reverse (type): Description of parameter `reverse`.
-            protect (type): Description of parameter `protect`.
+            L (ndarray(Float)): Description of parameter `L`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            reverse (Bool): Description of parameter `reverse`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -554,10 +539,10 @@ class SP:
         Follow the method in the Parallel Robotics Textbook
 
         Args:
-            L (type): Description of parameter `L`.
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            reverse (type): Description of parameter `reverse`.
-            protect (type): Description of parameter `protect`.
+            L (ndarray(Float)): Description of parameter `L`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            reverse (Bool): Description of parameter `reverse`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -596,10 +581,10 @@ class SP:
         optionally bottom position, reverse parameter, and protection
 
         Args:
-            L (type): Description of parameter `L`.
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            reverse (type): Description of parameter `reverse`.
-            protect (type): Description of parameter `protect`.
+            L (ndarray(Float)): Description of parameter `L`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            reverse (Bool): Description of parameter `reverse`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -643,10 +628,10 @@ class SP:
         Adapted from the work done by
         #http://jak-o-shadows.github.io/electronics/stewart-gough/stewart-gough.html
         Args:
-            L (type): Description of parameter `L`.
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            reverse (type): Description of parameter `reverse`.
-            protect (type): Description of parameter `protect`.
+            L (ndarray(Float)): Description of parameter `L`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            reverse (Bool): Description of parameter `reverse`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -733,7 +718,7 @@ class SP:
         Only used as an assistance function for fixing plate alignment
 
         Args:
-            stopt (type): Description of parameter `stopt`.
+            stopt (tm): Description of parameter `stopt`.
 
         Returns:
             type: Description of returned object.
@@ -813,8 +798,8 @@ class SP:
         """
 
         Args:
-            valid (type): Description of parameter `valid`.
-            donothing (type): Description of parameter `donothing`.
+            valid (Bool): Description of parameter `valid`.
+            donothing (Bool): Description of parameter `donothing`.
 
         Returns:
             type: Description of returned object.
@@ -836,8 +821,8 @@ class SP:
         """
 
         Args:
-            valid (type): Description of parameter `valid`.
-            donothing (type): Description of parameter `donothing`.
+            valid (Bool): Description of parameter `valid`.
+            donothing (Bool): Description of parameter `donothing`.
 
         Returns:
             type: Description of returned object.
@@ -858,8 +843,8 @@ class SP:
         """
 
         Args:
-            valid (type): Description of parameter `valid`.
-            donothing (type): Description of parameter `donothing`.
+            valid (Bool): Description of parameter `valid`.
+            donothing (Bool): Description of parameter `donothing`.
 
         Returns:
             type: Description of returned object.
@@ -882,8 +867,8 @@ class SP:
         """
 
         Args:
-            valid (type): Description of parameter `valid`.
-            donothing (type): Description of parameter `donothing`.
+            valid (Bool): Description of parameter `valid`.
+            donothing (Bool): Description of parameter `donothing`.
 
         Returns:
             type: Description of returned object.
@@ -908,8 +893,8 @@ class SP:
         Validate the current configuration of the stewart platform
 
         Args:
-            donothing (type): Description of parameter `donothing`.
-            validation_limit (type): Description of parameter `validation_limit`.
+            donothing (Bool): Description of parameter `donothing`.
+            validation_limit (Int): Description of parameter `validation_limit`.
 
         Returns:
             type: Description of returned object.
@@ -954,7 +939,7 @@ class SP:
         Evaluate Leg Length Limitations of Stewart Platform
 
         Args:
-            donothing (type): Description of parameter `donothing`.
+            donothing (Bool): Description of parameter `donothing`.
 
         Returns:
             type: Description of returned object.
@@ -969,8 +954,8 @@ class SP:
         """
 
         Args:
-            current_leg_min (type): Description of parameter `current_leg_min`.
-            current_leg_max (type): Description of parameter `current_leg_max`.
+            current_leg_min (Float): Description of parameter `current_leg_min`.
+            current_leg_max (Float): Description of parameter `current_leg_max`.
 
         Returns:
             type: Description of returned object.
@@ -988,8 +973,8 @@ class SP:
         """
 
         Args:
-            current_leg_min (type): Description of parameter `current_leg_min`.
-            current_leg_max (type): Description of parameter `current_leg_max`.
+            current_leg_min (Float): Description of parameter `current_leg_min`.
+            current_leg_max (Float): Description of parameter `current_leg_max`.
 
         Returns:
             type: Description of returned object.
@@ -1004,8 +989,8 @@ class SP:
         """
 
         Args:
-            current_leg_min (type): Description of parameter `current_leg_min`.
-            current_leg_max (type): Description of parameter `current_leg_max`.
+            current_leg_min (Float): Description of parameter `current_leg_min`.
+            current_leg_max (Float): Description of parameter `current_leg_max`.
 
         Returns:
             type: Description of returned object.
@@ -1199,7 +1184,7 @@ class SP:
         """
 
         Args:
-            tau (type): Description of parameter `tau`.
+            tau (ndarray(Float)): Description of parameter `tau`.
 
         Returns:
             type: Description of returned object.
@@ -1225,8 +1210,8 @@ class SP:
         Checks to make sure that a bottom and top provided are not null
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
 
         Returns:
             type: Description of returned object.
@@ -1243,8 +1228,8 @@ class SP:
         Calculates space jacobian for stewart platform. Takes in bottom transform and top transform
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
 
         Returns:
             type: Description of returned object.
@@ -1262,9 +1247,9 @@ class SP:
         Calculates Inverse Jacobian for stewart platform. Takes in bottom and top transforms
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            protect (type): Description of parameter `protect`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1302,9 +1287,9 @@ class SP:
         Returns top down jacobian instead of bottom up
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            protect (type): Description of parameter `protect`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1331,8 +1316,8 @@ class SP:
         Calculates the forces on each leg given their masses,
         masses of plates, and a wrench on the end effector.
         Args:
-            twrench (type): Description of parameter `twrench`.
-            protect (type): Description of parameter `protect`.
+            twrench (ndarray(Float)): Description of parameter `twrench`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1353,12 +1338,12 @@ class SP:
             self.bottom_plate_newton_force, self.dir)
         return tau, wrench
 
-    def carryMassCalcNew(self, twrench, protect = False):
+    def carryMassCalcLocal(self, twrench, protect = False):
         """
 
         Args:
-            twrench (type): Description of parameter `twrench`.
-            protect (type): Description of parameter `protect`.
+            twrench (ndarray(Float)): Description of parameter `twrench`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1391,8 +1376,8 @@ class SP:
         """
 
         Args:
-            wrench (type): Description of parameter `wrench`.
-            protect (type): Description of parameter `protect`.
+            wrench (ndarray(Float)): Description of parameter `wrench`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1408,8 +1393,8 @@ class SP:
         """
 
         Args:
-            twrench (type): Description of parameter `twrench`.
-            protect (type): Description of parameter `protect`.
+            twrench (ndarray(Float)): Description of parameter `twrench`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1436,10 +1421,10 @@ class SP:
         Calculates forces on legs given end effector wrench
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            top_plate_wrench (type): Description of parameter `top_plate_wrench`.
-            protect (type): Description of parameter `protect`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            top_plate_wrench (ndarray(Float)): Description of parameter `top_plate_wrench`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             measureForcesFromWrenchEE(self, bottom_plate_pos =: Description of returned object.
@@ -1464,10 +1449,10 @@ class SP:
         Calculates forces on legs given end effector wrench
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            top_plate_wrench (type): Description of parameter `top_plate_wrench`.
-            protect (type): Description of parameter `protect`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            top_plate_wrench (ndarray(Float)): Description of parameter `top_plate_wrench`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             measureForcesFromBottomEE(self, bottom_plate_pos =: Description of returned object.
@@ -1489,9 +1474,9 @@ class SP:
         Calculates wrench on end effector from leg forces
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            tau (type): Description of parameter `tau`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            tau (ndarray(Float)): Description of parameter `tau`.
 
         Returns:
             type: Description of returned object.
@@ -1509,9 +1494,9 @@ class SP:
         Unused. Calculates wrench on the bottom plate from leg forces
 
         Args:
-            bottom_plate_pos (type): Description of parameter `bottom_plate_pos`.
-            top_plate_pos (type): Description of parameter `top_plate_pos`.
-            tau (type): Description of parameter `tau`.
+            bottom_plate_pos (tm): Description of parameter `bottom_plate_pos`.
+            top_plate_pos (tm): Description of parameter `top_plate_pos`.
+            tau (ndarray(Float)): Description of parameter `tau`.
 
         Returns:
             type: Description of returned object.
@@ -1528,7 +1513,7 @@ class SP:
         """
 
         Args:
-            forces (type): Description of parameter `forces`.
+            forces (ndarray(Float)): Description of parameter `forces`.
 
         Returns:
             type: Description of returned object.
@@ -1550,8 +1535,8 @@ class SP:
         Move entire Assembler Stack to another location and orientation
         This function and syntax are shared between all kinematic structures.
         Args:
-            T (type): Description of parameter `T`.
-            protect (type): Description of parameter `protect`.
+            T (tm): Description of parameter `T`.
+            protect (Bool): Description of parameter `protect`.
 
         Returns:
             type: Description of returned object.
@@ -1566,13 +1551,12 @@ class SP:
             top_plate_pos = fsr.LocalToGlobal(self.getBottomT(), self.current_plate_transform_local),
             protect = protect)
 
-    def printOutOfDateFunction(sef, old_name, use_name):
+    def printOutOfDateFunction(self, old_name, use_name):
         """
 
         Args:
-            sef (type): Description of parameter `sef`.
-            old_name (type): Description of parameter `old_name`.
-            use_name (type): Description of parameter `use_name`.
+            old_name (String): Description of parameter `old_name`.
+            use_name (String): Description of parameter `use_name`.
 
         Returns:
             type: Description of returned object.
@@ -1766,8 +1750,8 @@ class SP:
         """
         Deprecated. Don't Use
         """
-        self.printOutOfDateFunction("CarryMassCalcNew","carryMassCalcNew")
-        return self.carryMassCalcNew(twrench, protect)
+        self.printOutOfDateFunction("CarryMassCalcNew","carryMassCalcLocal")
+        return self.carryMassCalcLocal(twrench, protect)
     def MeasureForcesAtEENew(self, wrench, protect = False):
         """
         Deprecated. Don't Use
@@ -1786,14 +1770,14 @@ class SP:
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("MeasureForcesFromWrenchEE","measureForcesFromWrenchEE")
-        return self.measureForcesFromWrenchEE(bottomT, topT, topWee, protect)
+        return self.measureForcesFromWrenchEE(bottomT, topT, topWEE, protect)
     def MeasureForcesFromBottomEE(self, bottomT = np.zeros((1)) ,
         topT = np.zeros((1)), topWEE = np.zeros((1)), protect = True):
         """
         Deprecated. Don't Use
         """
         self.printOutOfDateFunction("MeasureForcesFromBottomEE","measureForcesFromBottomEE")
-        return self.measureForcesFromBottomEE(bottomT, topT, topWee, protect)
+        return self.measureForcesFromBottomEE(bottomT, topT, topWEE, protect)
     def WrenchEEFromMeasuredForces(self,bottomT,topT,tau):
         """
         Deprecated. Don't Use
@@ -1819,10 +1803,10 @@ def loadSP(fname, file_directory = "../robot_definitions/", baseloc = None, altR
     Loads A Stewart Platform Object froma  file
 
     Args:
-        fname (type): Description of parameter `fname`.
-        file_directory (type): Description of parameter `file_directory`.
-        baseloc (type): Description of parameter `baseloc`.
-        altRot (type): Description of parameter `altRot`.
+        fname (String): Description of parameter `fname`.
+        file_directory (String): Description of parameter `file_directory`.
+        baseloc (tm): Description of parameter `baseloc`.
+        altRot (Float): Description of parameter `altRot`.
 
     Returns:
         type: Description of returned object.
@@ -1892,23 +1876,23 @@ def newSP(bottom_radius, top_radius, bJointSpace, tJointSpace,
     """
 
     Args:
-        bottom_radius (type): Description of parameter `bottom_radius`.
-        top_radius (type): Description of parameter `top_radius`.
-        bJointSpace (type): Description of parameter `bJointSpace`.
-        tJointSpace (type): Description of parameter `tJointSpace`.
-        bottom_plate_thickness (type): Description of parameter `bottom_plate_thickness`.
-        top_plate_thickness (type): Description of parameter `top_plate_thickness`.
-        actuator_shaft_mass (type): Description of parameter `actuator_shaft_mass`.
-        actuator_motor_mass (type): Description of parameter `actuator_motor_mass`.
-        plate_top_mass (type): Description of parameter `plate_top_mass`.
-        plate_bot_mass (type): Description of parameter `plate_bot_mass`.
-        motor_grav_center (type): Description of parameter `motor_grav_center`.
-        shaft_grav_center (type): Description of parameter `shaft_grav_center`.
-        actuator_min (type): Description of parameter `actuator_min`.
-        actuator_max (type): Description of parameter `actuator_max`.
-        base_location (type): Description of parameter `base_location`.
-        name (type): Description of parameter `name`.
-        rot (type): Description of parameter `rot`.
+        bottom_radius (Float): Description of parameter `bottom_radius`.
+        top_radius (Float): Description of parameter `top_radius`.
+        bJointSpace (ndarray(Float)): Description of parameter `bJointSpace`.
+        tJointSpace (ndarray(Float)): Description of parameter `tJointSpace`.
+        bottom_plate_thickness (Float): Description of parameter `bottom_plate_thickness`.
+        top_plate_thickness (Float): Description of parameter `top_plate_thickness`.
+        actuator_shaft_mass (Float): Description of parameter `actuator_shaft_mass`.
+        actuator_motor_mass (Float): Description of parameter `actuator_motor_mass`.
+        plate_top_mass (Float): Description of parameter `plate_top_mass`.
+        plate_bot_mass (Float): Description of parameter `plate_bot_mass`.
+        motor_grav_center (Float): Description of parameter `motor_grav_center`.
+        shaft_grav_center (Float): Description of parameter `shaft_grav_center`.
+        actuator_min (Float): Description of parameter `actuator_min`.
+        actuator_max (Float): Description of parameter `actuator_max`.
+        base_location (tm): Description of parameter `base_location`.
+        name (String): Description of parameter `name`.
+        rot (Float): Description of parameter `rot`.
 
     Returns:
         type: Description of returned object.
@@ -1987,20 +1971,19 @@ def newSP(bottom_radius, top_radius, bJointSpace, tJointSpace,
 
     return newsp
 def makeSP(bRad, tRad, spacing, baseT,
-    platOffset, rot = -1, plate_thickness_avg = 0, lset = None, altRot = 0):
+    platOffset, rot = -1, plate_thickness_avg = 0, altRot = 0):
     """
     Builds a new stewart platform object.
 
     Args:
-        bRad (type): Description of parameter `bRad`.
-        tRad (type): Description of parameter `tRad`.
-        spacing (type): Description of parameter `spacing`.
-        baseT (type): Description of parameter `baseT`.
-        platOffset (type): Description of parameter `platOffset`.
-        rot (type): Description of parameter `rot`.
-        plate_thickness_avg (type): Description of parameter `plate_thickness_avg`.
-        lset (type): Description of parameter `lset`.
-        altRot (type): Description of parameter `altRot`.
+        bRad (Float): Description of parameter `bRad`.
+        tRad (Float): Description of parameter `tRad`.
+        spacing (Float): Description of parameter `spacing`.
+        baseT (tm): Description of parameter `baseT`.
+        platOffset (Float): Description of parameter `platOffset`.
+        rot (Float): Description of parameter `rot`.
+        plate_thickness_avg (Float): Description of parameter `plate_thickness_avg`.
+        altRot (Float): Description of parameter `altRot`.
 
     Returns:
         type: Description of returned object.
