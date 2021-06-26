@@ -26,6 +26,8 @@ class Arm:
             end_effector_home: Initial end effector of arm.
             joint_poses_home: joint_poses_home list for arm
             joint_axes: joint_axes list for arm
+        Returns:
+            Arm: arm object
         """
         #Configure the arm given the base screws, the base transform.
         self.cameras = []
@@ -938,7 +940,21 @@ class Arm:
         """
         return self.end_effector_pos_global.copy()
 
+    def getScrewList(self):
+        """
+        Returns screw list in space
+        Return:
+            screw list
+        """
+        return self.screw_list.copy()
 
+    def getLinkDimensions(self):
+        """
+        Returns link dimensions
+        Return:
+            link dimensions
+        """
+        return self.link_dimensions.copy()
 
     """
       ______                                        _   _____                              _
@@ -1102,9 +1118,7 @@ class Arm:
         Returns
             tau: tau
             M: todo
-            c: todo
             G: todo
-            ee: todo
         """
         n = theta.size
         A = np.zeros((6*n, n))
