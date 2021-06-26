@@ -38,8 +38,8 @@ class SP:
         self.top_joints_init = self.top_joints.conj().transpose()
         self.bottom_plate_pos = bT.copy()
         self.top_plate_pos = tT.copy()
-        self.bottom_joints_space = np.zeros((3,6))
-        self.top_joints_space = np.zeros((3,6))
+        self.bottom_joints_space = np.zeros((3, 6))
+        self.top_joints_space = np.zeros((3, 6))
 
         #Debug
         self.leg_ext_safety = .001
@@ -55,7 +55,7 @@ class SP:
         self.leg_ext_max = leg_ext_max
 
         #Reserve Val
-        self.nominal_height = fsr.Distance(bT,tT)
+        self.nominal_height = fsr.Distance(bT, tT)
         self.nominal_plate_transform = tm([0, 0, self.nominal_height, 0, 0, 0])
 
         #Drawing Characteristics
@@ -108,24 +108,24 @@ class SP:
         self.bottom_joint_angles = [None] * 6
         for i in range(6):
             self.bottom_joint_angles_init[i] = fsr.GlobalToLocal(self.getBottomT(),
-                tm([self.top_joints_space.T[i][0],self.top_joints_space.T[i][1],
-                self.top_joints_space.T[i][2],0,0,0]))
+                tm([self.top_joints_space.T[i][0], self.top_joints_space.T[i][1],
+                self.top_joints_space.T[i][2], 0, 0, 0]))
             self.bottom_joint_angles[i] = fsr.GlobalToLocal(self.getTopT(),
-                tm([self.bottom_joints_space.T[i][0],self.bottom_joints_space.T[i][1],
-                self.bottom_joints_space.T[i][2],0,0,0]))
+                tm([self.bottom_joints_space.T[i][0], self.bottom_joints_space.T[i][1],
+                self.bottom_joints_space.T[i][2], 0, 0, 0]))
 
         t1 = fsr.GlobalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
-            tm([self.top_joints_space[0,0],
-            self.top_joints_space[1,0],
-            self.top_joints_space[2,0], 0,0,0]))
+            tm([self.top_joints_space[0, 0],
+            self.top_joints_space[1, 0],
+            self.top_joints_space[2, 0], 0, 0, 0]))
         t2 = fsr.GlobalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
-            tm([self.top_joints_space[0,2],
-            self.top_joints_space[1,2],
-            self.top_joints_space[2,2], 0,0,0]))
+            tm([self.top_joints_space[0, 2],
+            self.top_joints_space[1, 2],
+            self.top_joints_space[2, 2], 0, 0, 0]))
         t3 = fsr.GlobalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
-            tm([self.top_joints_space[0,4],
-            self.top_joints_space[1,4],
-            self.top_joints_space[2,4], 0,0,0]))
+            tm([self.top_joints_space[0, 4],
+            self.top_joints_space[1, 4],
+            self.top_joints_space[2, 4], 0, 0, 0]))
         self.reorients = [t1, t2, t3]
 
 
@@ -347,13 +347,13 @@ class SP:
         """
         pos = 0
         if type == 'm':
-            pos = np.array([(self.bottom_joints_space[0,num] + self.top_joints_space[0,num])/2,
-                (self.bottom_joints_space[1,num] + self.top_joints_space[1,num])/2,
-                (self.bottom_joints_space[2,num] + self.top_joints_space[2,num])/2])
-        bottom_act_joint = tm([self.bottom_joints_space[0,num],
-            self.bottom_joints_space[1,num],self.bottom_joints_space[2,num],0,0,0])
-        top_act_joint = tm([self.top_joints_space[0,num],
-            self.top_joints_space[1,num],self.top_joints_space[2,num],0,0,0])
+            pos = np.array([(self.bottom_joints_space[0, num] + self.top_joints_space[0, num])/2,
+                (self.bottom_joints_space[1, num] + self.top_joints_space[1, num])/2,
+                (self.bottom_joints_space[2, num] + self.top_joints_space[2, num])/2])
+        bottom_act_joint = tm([self.bottom_joints_space[0, num],
+            self.bottom_joints_space[1, num], self.bottom_joints_space[2, num], 0, 0, 0])
+        top_act_joint = tm([self.top_joints_space[0, num],
+            self.top_joints_space[1, num], self.top_joints_space[2, num], 0, 0, 0])
         if type == 'b':
             #return fsr.TMMidRotAdjust(bottom_act_joint, bottom_act_joint,
             #   top_act_joint, mode = 1) @ tm([0, 0, self.act_motor_grav_center, 0, 0, 0])
@@ -382,16 +382,16 @@ class SP:
         current_top_pos = self.getTopT()
         top_joints_copy = self.top_joints_space.copy()
         bottom_joints_copy = self.bottom_joints_space.copy()
-        top_joints_origin_copy = self.top_joints[2,0:6]
-        bottom_joints_origin_copy = self.bottom_joints[2,0:6]
+        top_joints_origin_copy = self.top_joints[2, 0:6]
+        bottom_joints_origin_copy = self.bottom_joints[2, 0:6]
         rotation_transform = tm([0, 0, 0, 0, 0, rot * np.pi / 180])
         self.move(rotation_transform)
         top_joints_space_new = self.top_joints_space.copy()
         bottom_joints_space_new = self.bottom_joints_space.copy()
-        top_joints_copy[0:2,0:6] = top_joints_space_new[0:2,0:6]
-        bottom_joints_copy[0:2,0:6] = bottom_joints_space_new[0:2,0:6]
-        bottom_joints_copy[2,0:6] = bottom_joints_origin_copy
-        top_joints_copy[2,0:6] = top_joints_origin_copy
+        top_joints_copy[0:2, 0:6] = top_joints_space_new[0:2, 0:6]
+        bottom_joints_copy[0:2, 0:6] = bottom_joints_space_new[0:2, 0:6]
+        bottom_joints_copy[2, 0:6] = bottom_joints_origin_copy
+        top_joints_copy[2, 0:6] = top_joints_origin_copy
         self.move(tm())
         self.bottom_joints = bottom_joints_copy
         self.top_joints = top_joints_copy
@@ -592,8 +592,8 @@ class SP:
         """
         #Do SPFK with scipy inbuilt solvers. Way less speedy o
         #Or accurate than Raphson, but much simpler to look at
-        L = L.reshape((6,1))
-        self.lengths = L.reshape((6,1)).copy()
+        L = L.reshape((6, 1))
+        self.lengths = L.reshape((6, 1)).copy()
         #jac = lambda x : self.inverseJacobianSpace(top_plate_pos = x)
 
         #Slightly different if the platform is supposed to be "reversed"
@@ -644,7 +644,7 @@ class SP:
             bottom_plate_pos = self.getBottomT()
         success = True
         L = L.reshape((6))
-        self.lengths = L.reshape((6,1)).copy()
+        self.lengths = L.reshape((6, 1)).copy()
 
         bottom_plate_pos_backup = bottom_plate_pos.copy()
             # @ tm([0, 0, self.bottom_plate_thickness, 0, 0, 0])
@@ -689,7 +689,7 @@ class SP:
                     return self.getBottomT(), self.getTopT()
 
             #Otherwise return the calculated end effector position
-            #coords =tm(bottom_plate_pos_backup @ fsr.TAAtoTM(a.reshape((6,1))))
+            #coords =tm(bottom_plate_pos_backup @ fsr.TAAtoTM(a.reshape((6, 1))))
             coords = bottom_plate_pos_backup @ tm(a)
             # @ tm([0, 0, self.top_plate_thickness, 0, 0, 0])
 
@@ -729,17 +729,17 @@ class SP:
         reorient_helper_3 = fsr.LocalToGlobal(stopt, self.reorients[2])
 
         d1 = fsr.Distance(reorient_helper_1,
-            tm([self.top_joints_space[0,0],
-            self.top_joints_space[1,0],
-            self.top_joints_space[2,0], 0,0,0]))
+            tm([self.top_joints_space[0, 0],
+            self.top_joints_space[1, 0],
+            self.top_joints_space[2, 0], 0, 0, 0]))
         d2 = fsr.Distance(reorient_helper_2,
-            tm([self.top_joints_space[0,2],
-            self.top_joints_space[1,2],
-            self.top_joints_space[2,2], 0,0,0]))
+            tm([self.top_joints_space[0, 2],
+            self.top_joints_space[1, 2],
+            self.top_joints_space[2, 2], 0, 0, 0]))
         d3 = fsr.Distance(reorient_helper_3,
-            tm([self.top_joints_space[0,4],
-            self.top_joints_space[1,4],
-            self.top_joints_space[2,4], 0,0,0]))
+            tm([self.top_joints_space[0, 4],
+            self.top_joints_space[1, 4],
+            self.top_joints_space[2, 4], 0, 0, 0]))
         return np.array([d1 , d2 , d3])
 
     def reorientTopPlate(self):
@@ -771,18 +771,18 @@ class SP:
             type: Description of returned object.
         """
         for num in range(6):
-            #reversable = fsr.GlobalToLocal(tm([self.top_joints_space[0,num],
-            #    self.top_joints_space[1,num],self.top_joints_space[2,num],0,0,0]),
-            #    tm([self.bottom_joints_space[0,num],
-            #    self.bottom_joints_space[1,num],
-            #    self.bottom_joints_space[2,num],0,0,0]))
-            #newTJ = tm([self.bottom_joints_space[0,num],
-            #    self.bottom_joints_space[1,num],
-            #    self.bottom_joints_space[2,num],0,0,0]) @ reversable
+            #reversable = fsr.GlobalToLocal(tm([self.top_joints_space[0, num],
+            #    self.top_joints_space[1, num], self.top_joints_space[2, num], 0, 0, 0]),
+            #    tm([self.bottom_joints_space[0, num],
+            #    self.bottom_joints_space[1, num],
+            #    self.bottom_joints_space[2, num], 0, 0, 0]))
+            #newTJ = tm([self.bottom_joints_space[0, num],
+            #    self.bottom_joints_space[1, num],
+            #    self.bottom_joints_space[2, num], 0, 0, 0]) @ reversable
             newTJ = fsr.Mirror(self.getBottomT() @ tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
-                tm([self.top_joints_space[0,num],
-                self.top_joints_space[1,num],
-                self.top_joints_space[2,num],0,0,0]))
+                tm([self.top_joints_space[0, num],
+                self.top_joints_space[1, num],
+                self.top_joints_space[2, num], 0, 0, 0]))
             self.top_joints_space[0, num] = newTJ[0]
             self.top_joints_space[1, num] = newTJ[1]
             self.top_joints_space[2, num] = newTJ[2]
@@ -926,10 +926,10 @@ class SP:
         """
         valid = True
         for i in range(3):
-            if self.current_plate_transform_local.gTM()[i,i] <= self.plate_rotation_limit - .0001:
+            if self.current_plate_transform_local.gTM()[i, i] <= self.plate_rotation_limit - .0001:
                 if self.debug:
                     disp(self.current_plate_transform_local.gTM(), "Erroneous TM")
-                    print([self.current_plate_transform_local.gTM()[i,i],
+                    print([self.current_plate_transform_local.gTM()[i, i],
                         self.plate_rotation_limit])
                 valid = False
         return valid
@@ -950,7 +950,7 @@ class SP:
             valid = False
         return valid
 
-    def rescaleLegLengths(self,current_leg_min,current_leg_max):
+    def rescaleLegLengths(self, current_leg_min, current_leg_max):
         """
 
         Args:
@@ -965,9 +965,9 @@ class SP:
         for i in range(6):
             self.lengths[i] = ((self.lengths[i]-current_leg_min)/
                 (current_leg_max-current_leg_min) *
-                (min(self.leg_ext_max,current_leg_max) -
-                max(self.leg_ext_min,current_leg_min)) +
-                max(self.leg_ext_min,current_leg_min))
+                (min(self.leg_ext_max, current_leg_max) -
+                max(self.leg_ext_min, current_leg_min)) +
+                max(self.leg_ext_min, current_leg_min))
 
     def addLegsToMinimum(self, current_leg_min, current_leg_max):
         """
@@ -1020,24 +1020,24 @@ class SP:
         #for i in range(6):
         #    self.lengths[i] = ((self.lengths[i]-current_leg_min)/
         #    (current_leg_max-current_leg_min) *
-        #    (min(self.leg_ext_max,current_leg_max) -
-        #    max(self.leg_ext_min,current_leg_min)) +
-        #    max(self.leg_ext_min,current_leg_min))
+        #    (min(self.leg_ext_max, current_leg_max) -
+        #    max(self.leg_ext_min, current_leg_min)) +
+        #    max(self.leg_ext_min, current_leg_min))
         if current_leg_min < self.leg_ext_min and current_leg_max > self.leg_ext_max:
-            self.rescaleLegLengths(current_leg_min,current_leg_max)
+            self.rescaleLegLengths(current_leg_min, current_leg_max)
             self.validation_error+= " CMethod: Rescale, "
         elif (current_leg_min < self.leg_ext_min and
             current_leg_max + (self.leg_ext_min - current_leg_min) +
             self.leg_ext_safety < self.leg_ext_max):
-            self.addLegsToMinimum(current_leg_min,current_leg_max)
+            self.addLegsToMinimum(current_leg_min, current_leg_max)
             self.validation_error+= " CMethod: Boost, "
         elif (current_leg_max > self.leg_ext_max and
             current_leg_min - (current_leg_max - self.leg_ext_max) -
             self.leg_ext_safety > self.leg_ext_min):
             self.validation_error+= " CMethod: Subract, "
-            self.subLegsToMaximum(current_leg_min,current_leg_max)
+            self.subLegsToMaximum(current_leg_min, current_leg_max)
         else:
-            self.rescaleLegLengths(current_leg_min,current_leg_max)
+            self.rescaleLegLengths(current_leg_min, current_leg_max)
             self.validation_error+= " CMethod: Unknown Rescale, "
 
         #self.lengths[np.where(self.lengths > self.leg_ext_max)] = self.leg_ext_max
@@ -1154,17 +1154,17 @@ class SP:
         top_down = np.zeros((6))
         bottom_up = np.zeros((6))
         for i in range(6):
-            top_joints_temp = self.top_joints_space[:,i].copy().flatten()
+            top_joints_temp = self.top_joints_space[:, i].copy().flatten()
             top_joints_temp[2] = 0
-            bottom_joints_temp = self.bottom_joints_space[:,i].copy().flatten()
+            bottom_joints_temp = self.bottom_joints_space[:, i].copy().flatten()
             bottom_joints_temp[2] = bottom_joints_temp[2] + 1
             angle = fsr.AngleBetween(
-                self.bottom_joints_space[:,i],
-                self.top_joints_space[:,i],
+                self.bottom_joints_space[:, i],
+                self.top_joints_space[:, i],
                 top_joints_temp)
             angle_up = fsr.AngleBetween(
-                self.top_joints_space[:,i],
-                self.bottom_joints_space[:,i],
+                self.top_joints_space[:, i],
+                self.bottom_joints_space[:, i],
                 bottom_joints_temp)
             top_down[i] = angle
             bottom_up[i] = angle_up
@@ -1193,11 +1193,11 @@ class SP:
         vertical_components = np.zeros((6))
         horizontal_components = np.zeros((6))
         for i in range(6):
-            top_joint = self.top_joints_space[:,i].copy().flatten()
+            top_joint = self.top_joints_space[:, i].copy().flatten()
             top_joint[2] = 0
             angle = fsr.AngleBetween(
-                self.bottom_joints_space[:,i],
-                self.top_joints_space[:,i],
+                self.bottom_joints_space[:, i],
+                self.top_joints_space[:, i],
                 top_joint)
             vertical_force = tau[i] * np.sin(angle)
             horizontal_force = tau[i] * np.cos(angle)
@@ -1266,18 +1266,18 @@ class SP:
         self.IK(bottom_plate_pos, top_plate_pos, protect = protect)
 
         #Create Jacobian
-        inverse_jacobian_transpose = np.zeros((6,6))
+        inverse_jacobian_transpose = np.zeros((6, 6))
         for i in range(6):
             #todo check sign on nim,
-            ni = fmr.Normalize(self.top_joints_space[:,i]-self.bottom_joints_space[:,i])
+            ni = fmr.Normalize(self.top_joints_space[:, i]-self.bottom_joints_space[:, i])
              #Reverse for upward forces?
-            qi = self.bottom_joints_space[:,i]
-            col = np.hstack((np.cross(qi,ni),ni))
-            inverse_jacobian_transpose[:,i] = col
+            qi = self.bottom_joints_space[:, i]
+            col = np.hstack((np.cross(qi, ni), ni))
+            inverse_jacobian_transpose[:, i] = col
         inverse_jacobian = inverse_jacobian_transpose.T
 
         #Restore original Values
-        self.IK(old_bottom_plate_transform,old_top_plate_transform, protect = protect)
+        self.IK(old_bottom_plate_transform, old_top_plate_transform, protect = protect)
         return inverse_jacobian
 
     #Returns Top Down Jacobian instead of Bottom Up
@@ -1299,14 +1299,14 @@ class SP:
         old_bottom_plate_transform = copy.copy(bottom_plate_pos)
         old_top_plate_transform = copy.copy(top_plate_pos)
         self.IK(bottom_plate_pos, top_plate_pos)
-        inverse_jacobian_transpose = np.zeros((6,6))
+        inverse_jacobian_transpose = np.zeros((6, 6))
         for i in range(6):
-            ni = fmr.Normalize(self.bottom_joints_space[:,i]-self.top_joints_space[:,i])
-            qi = self.top_joints_space[:,i]
-            inverse_jacobian_transpose[:,i] = np.hstack((np.cross(qi,ni),ni))
+            ni = fmr.Normalize(self.bottom_joints_space[:, i]-self.top_joints_space[:, i])
+            qi = self.top_joints_space[:, i]
+            inverse_jacobian_transpose[:, i] = np.hstack((np.cross(qi, ni), ni))
         inverse_jacobian = inverse_jacobian_transpose.conj().transpose()
 
-        self.IKHelper(old_bottom_plate_transform,old_top_plate_transform)
+        self.IKHelper(old_bottom_plate_transform, old_top_plate_transform)
 
         return inverse_jacobian
 
@@ -1469,7 +1469,7 @@ class SP:
         self.leg_forces = tau
         return tau
 
-    def wrenchEEFromMeasuredForces(self,bottom_plate_pos,top_plate_pos,tau):
+    def wrenchEEFromMeasuredForces(self, bottom_plate_pos, top_plate_pos, tau):
         """
         Calculates wrench on end effector from leg forces
 
@@ -1483,7 +1483,7 @@ class SP:
 
         """
         self.leg_forces = tau
-        jacobian_space = ling.pinv(self.inverseJacobianSpace(bottom_plate_pos,top_plate_pos))
+        jacobian_space = ling.pinv(self.inverseJacobianSpace(bottom_plate_pos, top_plate_pos))
         top_wrench = ling.inv(jacobian_space.conj().transpose()) @ tau
         #self.top_plate_wrench = fmr.Adjoint(top_plate_pos).conj().transpose() @ top_wrench
         self.top_plate_wrench = top_plate_pos.Adjoint().conj().transpose() @ top_wrench
@@ -1522,10 +1522,10 @@ class SP:
         if forces is None:
             forces = self.leg_forces
 
-        wrench = fsr.GenForceWrench(tm(), 0, [0,0,-1])
+        wrench = fsr.GenForceWrench(tm(), 0, [0, 0, -1])
         for i in range(6):
-            unit_vector = fmr.Normalize(self.bottom_joints_space[:,i]-self.top_joints_space[:,i])
-            wrench += fsr.GenForceWrench(self.top_joints_space[:,i], float(forces[i]), unit_vector)
+            unit_vector = fmr.Normalize(self.bottom_joints_space[:, i]-self.top_joints_space[:, i])
+            wrench += fsr.GenForceWrench(self.top_joints_space[:, i], float(forces[i]), unit_vector)
         #wrench = fsr.TransformWrenchFrame(wrench, tm(), self.getTopT())
         return wrench
 
@@ -1660,7 +1660,7 @@ class SP:
         """
         self.printOutOfDateFunction("_legLengthConstraint","legLengthConstraint")
         return self.legLengthConstraint(donothing)
-    def _resclLegs(self,cMin,cMax):
+    def _resclLegs(self, cMin, cMax):
         """
         Deprecated. Don't Use
         """
@@ -1778,7 +1778,7 @@ class SP:
         """
         self.printOutOfDateFunction("MeasureForcesFromBottomEE","measureForcesFromBottomEE")
         return self.measureForcesFromBottomEE(bottomT, topT, topWEE, protect)
-    def WrenchEEFromMeasuredForces(self,bottomT,topT,tau):
+    def WrenchEEFromMeasuredForces(self, bottomT, topT, tau):
         """
         Deprecated. Don't Use
         """
@@ -1872,7 +1872,7 @@ def loadSP(fname, file_directory = "../robot_definitions/", baseloc = None, altR
 def newSP(bottom_radius, top_radius, bJointSpace, tJointSpace,
     bottom_plate_thickness, top_plate_thickness, actuator_shaft_mass,
     actuator_motor_mass, plate_top_mass, plate_bot_mass, motor_grav_center,
-    shaft_grav_center,actuator_min, actuator_max, base_location, name, rot = 1):
+    shaft_grav_center, actuator_min, actuator_max, base_location, name, rot = 1):
     """
 
     Args:
@@ -1933,7 +1933,7 @@ def newSP(bottom_radius, top_radius, bJointSpace, tJointSpace,
             top_joint_gap+bottom_joint_gap+top_gap,
             -top_joint_gap-top_gap])
 
-    S = fmr.ScrewToAxis(np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0]), 0).reshape((6,1))
+    S = fmr.ScrewToAxis(np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0]), 0).reshape((6, 1))
 
     Mb = tm(np.array([bottom_radius, 0.0, 0.0, 0.0, 0.0, 0.0]))
      #how far from the bottom plate origin should clusters be generated
@@ -1943,13 +1943,13 @@ def newSP(bottom_radius, top_radius, bJointSpace, tJointSpace,
     bj = np.zeros((3, 6)) #Pre allocate arrays
     tj = np.zeros((3, 6))
 
-    for i in range(0,6):
+    for i in range(0, 6):
         bji = fsr.TransformFromTwist(bangles[i] * S) @ Mb
         tji = fsr.TransformFromTwist(tangles[i] * S) @ Mt
-        bj[0:3,i] = bji[0:3].reshape((3))
-        tj[0:3,i] = tji[0:3].reshape((3))
-        bj[2,i] = bottom_plate_thickness
-        tj[2,i] = -top_plate_thickness
+        bj[0:3, i] = bji[0:3].reshape((3))
+        tj[0:3, i] = tji[0:3].reshape((3))
+        bj[2, i] = bottom_plate_thickness
+        tj[2, i] = -top_plate_thickness
 
     bottom = base_location.copy()
     tentative_height = midHeightEstimate(
@@ -2023,7 +2023,7 @@ def makeSP(bRad, tRad, spacing, baseT,
 
     disp(bangles, "bangles")
     disp(tangles, "tangles")
-    S = fmr.ScrewToAxis(np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0]), 0).reshape((6,1))
+    S = fmr.ScrewToAxis(np.array([0.0, 0.0, 0.0]), np.array([0.0, 0.0, 1.0]), 0).reshape((6, 1))
 
     Mb = tm(np.array([bRad, 0.0, 0.0, 0.0, 0.0, 0.0]))
      #how far from the bottom plate origin should clusters be generated
@@ -2034,23 +2034,23 @@ def makeSP(bRad, tRad, spacing, baseT,
     tj = np.zeros((3, 6))
 
     #Generate position vectors (XYZ) for top and bottom joint locations
-    for i in range(0,6):
+    for i in range(0, 6):
         bji = fsr.TransformFromTwist(bangles[i] * S) @ Mb
         tji = fsr.TransformFromTwist(tangles[i] * S) @ Mt
-        bj[0:3,i] = bji[0:3].reshape((3))
-        tj[0:3,i] = tji[0:3].reshape((3))
-        bj[2,i] = plate_thickness_avg/2
-        tj[2,i] = -plate_thickness_avg/2
+        bj[0:3, i] = bji[0:3].reshape((3))
+        tj[0:3, i] = tji[0:3].reshape((3))
+        bj[2, i] = plate_thickness_avg/2
+        tj[2, i] = -plate_thickness_avg/2
 
     #if rot == -1:
     #    disp(bj, "Prechange")
 #
-#        rotby = TAAtoTM(np.array([0,0,0,0,0,np.pi/3]))
+#        rotby = TAAtoTM(np.array([0, 0, 0, 0, 0, np.pi/3]))
 #        for i in range(6):
-#            bj[0:3,i] = TMtoTAA(rotby @
-#                TAAtoTM(np.array([bj[0,i],bj[1,i],bj[2,i],0,0,0])))[0:3].reshape((3))
-#            tj[0:3,i] = TMtoTAA(rotby @
-#                TAAtoTM(np.array([tj[0,i],tj[1,i],tj[2,i],0,0,0])))[0:3].reshape((3))
+#            bj[0:3, i] = TMtoTAA(rotby @
+#                TAAtoTM(np.array([bj[0, i], bj[1, i], bj[2, i], 0, 0, 0])))[0:3].reshape((3))
+#            tj[0:3, i] = TMtoTAA(rotby @
+#                TAAtoTM(np.array([tj[0, i], tj[1, i], tj[2, i], 0, 0, 0])))[0:3].reshape((3))
 #        disp(bj, "postchange")
     bottom = baseT.copy()
     #Generate top position at offset from the bottom position
@@ -2076,7 +2076,7 @@ def midHeightEstimate(leg_ext_min, leg_ext_max, bj, bth, tth):
 
     """
     s1 = (leg_ext_min + leg_ext_max) / 2
-    d1 = fsr.Distance(tm([bj[0,0], bj[1,0], bj[2,0], 0, 0, 0]),
-            tm([bj[0,1], bj[1,1], bj[2,1], 0, 0, 0]))
+    d1 = fsr.Distance(tm([bj[0, 0], bj[1, 0], bj[2, 0], 0, 0, 0]),
+            tm([bj[0, 1], bj[1, 1], bj[2, 1], 0, 0, 0]))
     hest = (np.sqrt(s1 ** 2 - d1 **2)) + bth + tth
     return hest
