@@ -5,6 +5,9 @@ import numpy as np
 import scipy as sci
 import scipy.linalg as ling
 import random
+import xml.etree.ElementTree as ET
+import os
+import json
 from os.path import dirname, basename, isfile
 
 class Arm:
@@ -1416,3 +1419,272 @@ class Arm:
         Draws the arm using the faser_plot library
         """
         DrawArm(self, ax)
+
+class URDFLoader:
+    def __init__(self):
+        self.type = 'LINK'
+        self.sub_type = None
+        self.axis = None
+        self.xyz_origin = None #Use as CG for Joints
+        self.mass = None
+        self.inertia = None
+        self.id = None
+        self.name = None
+        self.parent = None
+        self.child = None
+
+def loadArmFromURDF(file_name):
+    """
+    Load an arm from a URDF File
+    Args:
+        file_name: file name of urdf object
+    Returns:
+        Arm object
+    """
+    #Joints connect parent and child links
+    #Each joint has anoriginframethat defines the position
+    #    and orientation of thechildlink frame relativeto the
+    #    parentlink frame when the joint variable is zero.
+    #    Theoriginis on he joint’s axis.
+    # Each joint has anaxis3-vector, a unit vector
+    #   expressed inthechildlink’s frame,
+    #   in the direction of positive rotation
+    #   for a revolutejoint or positive translation
+    #    for a prismatic joint.
+    try:
+        tree = ET.parse(file_name)
+    except:
+        if os.path.exists(file_name):
+            print('Malformed URDF or unrecognizeable format')
+        else:
+            print('File not Found')
+        return
+
+    root = tree.getroot()
+    link_count = 0
+    joint_count = 0
+    elements = []
+
+    def extractOrigin(x_obj):
+        """
+        Shortcut for pulling from xml.
+        Args:
+            x: xml object root
+        Returns:
+            origin of root
+        """
+        return x_obj.get('xyz').split(), x_obj.get('rpy').split()
+
+    def completeInertiaExtraction(child):
+        ixx = child.find('inertia').get('ixx')
+        ixy = child.find('inertia').get('ixy')
+        ixz = child.find('inertia').get('ixz')
+        iyy = child.find('inertia').get('iyy')
+        iyz = child.find('inertia').get('iyz')
+        izz = child.find('inertia').get('izz')
+        inertia_matrix = np.array([
+            [ixx, ixy, ixz],
+            [ixy, iyy, iyz],
+            [ixz, iyz, izz]], dtype=float)
+        return inertia_matrix
+
+    def completeLinkParse(new_element, parent):
+        for child in parent:
+            if child.tag == 'inertial':
+                cg_xyz_raw, cg_rpy_raw = extractOrigin(child)
+                cg_origin_xyz = np.array(cg_xyz_raw, dtype=float)
+                cg_origin_rpy = np.array(cg_rpy_raw, dtype=float)
+
+                cg_origin_tm = tm([cg_origin_xyz[0], cg_origin_xyz[1], cg_origin_xyz[2],
+                        cg_origin_rpy[0], cg_origin_rpy[1], cg_origin_rpy[2]])
+
+                new_element.xyz_origin = cg_origin_tm
+                new_element.inertia = completeInertiaExtraction(child)
+                new_element.mass = float(child.find('mass').get('value'))
+
+    def completeJointParse(new_element, parent):
+        print(new_element.name)
+        for child in parent:
+            if child.tag == 'axis':
+                axis = np.array(child.get('xyz').split(), dtype=float)
+                new_element.axis = axis
+            if child.tag == 'origin':
+                cg_xyz_raw, cg_rpy_raw = extractOrigin(child)
+                cg_origin_xyz = np.array(cg_xyz_raw, dtype=float)
+                cg_origin_rpy = np.array(cg_rpy_raw, dtype=float)
+
+                cg_origin_tm = tm([cg_origin_xyz[0], cg_origin_xyz[1], cg_origin_xyz[2],
+                        cg_origin_rpy[0], cg_origin_rpy[1], cg_origin_rpy[2]])
+
+                new_element.xyz_origin = cg_origin_tm
+
+    #Perform First Pass Parse
+    for child in root:
+        new_element = URDFLoader()
+        new_element.type = child.tag
+        new_element.name = child.get('name')
+        if new_element.type == 'link':
+            completeLinkParse(new_element, child)
+        elif new_element.type == 'joint':
+            new_element.sub_type = child.get('type')
+            completeJointParse(new_element, child)
+        elements.append(new_element)
+
+
+    def findNamedElement(named_element):
+        for element in elements:
+            if element.name == named_element:
+                return element
+
+    def printElements(elements):
+        for element in elements:
+            print("Name: " + str(element.name)
+                + ", Type: " + str(element.type)
+                + ", SubType: " + str(element.sub_type)
+                + ", Parent: " + str(element.parent)
+                + ", Child: " + str(element.child))
+
+    world_link = URDFLoader()
+    world_link.type = 'link'
+    world_link.sub_type = 'fixed'
+    elements.append(world_link)
+    #Assign Parents and Children to complete chain
+    for child in root:
+        if child.tag == 'joint':
+            this_element = findNamedElement(child.get('name'))
+            parent_name = 'world'
+            child_name = ''
+            for sub_child in child:
+                if sub_child.tag == 'parent':
+                    parent_name = sub_child.get('link')
+                elif sub_child.tag == 'child':
+                    child_name = sub_child.get('link')
+            parent_element = findNamedElement(parent_name)
+            child_element = findNamedElement(child_name)
+            this_element.parent = parent_element
+            parent_element.child = this_element
+            child_element.parent = this_element
+            this_element.child = child_element
+
+    #Account for cases that don't use world
+    if world_link.child is None:
+        elements.remove(world_link)
+        for element in elements:
+            if element.type == 'link' and element.parent is None:
+                world_link = element
+                break
+            elif element.type == 'joint' and element.sub_type == 'fixed' and element.parent is None:
+                world_link = element
+                break
+    num_dof = 0
+    #Count the number of degrees of freedom
+    for element in elements:
+        if element.type == 'joint' and element.sub_type != 'fixed':
+            num_dof += 1
+
+    home = tm()
+    joint_poses = [home]
+
+    joint_axes = np.zeros((3, num_dof))
+    joint_homes = np.zeros((3, num_dof))
+    arrind = 0
+
+    #Figure out the link home poses
+    temp_element = world_link
+    while temp_element.child is not None:
+        if temp_element.type == 'link' or temp_element.sub_type == 'fixed':
+            temp_element = temp_element.child
+            continue
+        joint_poses.append(joint_poses[-1] @ temp_element.xyz_origin)
+        joint_axes[0:3, arrind] = temp_element.axis
+        joint_homes[0:3, arrind] = joint_poses[-1][0:3].flatten()
+        temp_element = temp_element.child
+        arrind+=1
+
+    disp(arrind)
+    printElements(elements)
+    #Build the screw list
+    screw_list = np.zeros((6, num_dof))
+    for i in range(num_dof):
+        screw_list[0:6, i] = np.hstack((
+            joint_axes[0:3, i],
+            np.cross(joint_homes[0:3, i], joint_axes[0:3, i])))
+
+    arm = Arm(tm(), screw_list, joint_poses[-1], joint_homes, joint_axes)
+    arm.link_home_positions = joint_poses[1:]
+    disp(joint_poses[1:], "intended")
+
+    dims = np.zeros((3, num_dof + 1))
+    for i in range(num_dof + 1):
+        dims[0:3,
+             i] = np.array([.1, .1, .1])
+
+    arm.link_dimensions = dims
+    return arm
+
+def loadArmFromJSON(file_name):
+    """
+    Load Arm From a JSON File
+    Args:
+        file_name: filename of the json to be loaded
+    Returns:
+        Arm object
+    """
+    with open(file_name, 'r') as arm_file:
+        arm_data = json.load(arm_file)
+
+    num_dof = arm_data["NumDof"]
+    end_effector_home = tm(arm_data["EndEffectorLocation"])
+    base_location = tm(arm_data["BaseLocation"])
+
+    link_mass_centers_raw = []
+    joint_centers_raw = []
+    link_masses_raw = arm_data["LinkMasses"]
+    joint_home_positions_raw = []
+    box_dimensions_raw = []
+    for i in range(num_dof+1):
+        ii = str(i)
+        box_dimensions_raw.append(arm_data["LinkBoxDimensions"][ii])
+        joint_home_positions_raw.append(arm_data["JointHomePositions"][ii])
+        if i == num_dof:
+            continue
+        link_mass_centers_raw.append(tm(arm_data["LinkCentersOfMass"][ii]))
+        joint_centers_raw.append(arm_data["JointAxes"][ii])
+
+
+    joint_axes = np.array(joint_centers_raw).T
+
+    joint_home_positions = np.array(joint_home_positions_raw).T
+
+    disp(joint_axes)
+    screw_list = np.zeros((6, num_dof))
+    for i in range(0, num_dof):
+        screw_list[0:6, i] = np.hstack((joint_axes[0:3, i],
+            np.cross(joint_home_positions[0:3, i], joint_axes[0:3, i])))
+
+    dimensions = np.array(box_dimensions_raw).T
+
+    Mi = [None] * (num_dof + 1)
+    Mi[0] = link_mass_centers_raw[0]
+    for i in range(1, num_dof):
+        Mi[i] = link_mass_centers_raw[i].inv() @ link_mass_centers_raw[i]
+    Mi[num_dof] = link_mass_centers_raw[num_dof - 1] @ end_effector_home
+
+    masses = np.array(link_masses_raw)
+
+    box_spatial = np.zeros((num_dof, 6, 6))
+    for i in range(num_dof):
+        box_spatial[i,:,:] = fsr.BoxSpatialInertia(
+            masses[i], dimensions[0, i], dimensions[1, i], dimensions[2, i])
+    arm = Arm(base_location, screw_list,
+        end_effector_home, joint_home_positions, joint_axes)
+
+    disp(end_effector_home, "EEPOS")
+    home_poses = []
+    for pose in joint_home_positions_raw:
+        print(pose)
+        home_poses.append(tm([pose[0], pose[1], pose[2], 0, 0, 0]))
+    #arm.setDynamicsProperties(Mi, link_mass_centers_raw, box_spatial, dimensions)
+    arm.setDynamicsProperties(Mi, home_poses, box_spatial, dimensions)
+
+    return arm
