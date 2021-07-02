@@ -649,7 +649,8 @@ class Arm:
         self.screw_list_body = np.zeros((6, new_screw_list.shape[1]))
         if new_joint_poses_home.size > 1:
             for i in range(0, new_screw_list.shape[1]):
-                self.joint_poses_home[0:3, i] = fsr.transformByVector(new_thetas, new_joint_poses_home[0:3, i])
+                self.joint_poses_home[0:3, i] = fsr.transformByVector(new_thetas,
+                    new_joint_poses_home[0:3, i])
                 #Convert transformByVector
         for i in range(0, new_screw_list.shape[1]):
             self.screw_list[:, i] = fmr.Adjoint(new_thetas.gTM()) @ new_screw_list[:, i]

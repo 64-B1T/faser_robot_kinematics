@@ -724,7 +724,8 @@ class SP:
             #newTJ = tm([self.bottom_joints_space[0, num],
             #    self.bottom_joints_space[1, num],
             #    self.bottom_joints_space[2, num], 0, 0, 0]) @ reversable
-            newTJ = fsr.mirror(self.getBottomT() @ tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
+            newTJ = fsr.mirror(self.getBottomT() @
+                tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
                 tm([self.top_joints_space[0, num],
                 self.top_joints_space[1, num],
                 self.top_joints_space[2, num], 0, 0, 0]))
@@ -744,7 +745,8 @@ class SP:
         Validates leg lengths against leg minimums and maximums
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -767,7 +769,8 @@ class SP:
         Ensures that the top plate is always locally above the bottom plate
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -789,7 +792,8 @@ class SP:
         Ensures that interior angles do not violate angular limits
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -813,7 +817,8 @@ class SP:
         Ensures plate rotation does not validate limits
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -837,7 +842,8 @@ class SP:
         """
         Validate the current configuration of the stewart platform
         Args:
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
             validation_limit (Int): Description of parameter `validation_limit`.
 
         Returns:
@@ -1473,7 +1479,8 @@ class SP:
         self.current_plate_transform_local = fsr.globalToLocal(self.getBottomT(), self.getTopT())
         self.bottom_plate_pos = T.copy()
         self.IK(
-            top_plate_pos = fsr.localToGlobal(self.getBottomT(), self.current_plate_transform_local),
+            top_plate_pos = fsr.localToGlobal(self.getBottomT(),
+                    self.current_plate_transform_local),
             protect = protect)
 
     def printOutOfDateFunction(self, old_name, use_name):
