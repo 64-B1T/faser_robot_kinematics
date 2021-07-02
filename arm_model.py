@@ -71,8 +71,8 @@ class Arm:
         self.screw_list_body = np.zeros((6, screw_list.shape[1]))
         if joint_poses_home.size > 1:
             for i in range(0, screw_list.shape[1]):
-                self.joint_poses_home[0:3, i] = fsr.TrVec(base_pos_global, joint_poses_home[0:3, i])
-                #Convert TrVec
+                self.joint_poses_home[0:3, i] = fsr.transformByVector(base_pos_global, joint_poses_home[0:3, i])
+                #Convert transformByVector
         for i in range(0, screw_list.shape[1]):
             self.screw_list[:, i] = fmr.Adjoint(base_pos_global.gTM()) @ screw_list[:, i]
             if joint_poses_home.size <= 1:
@@ -285,7 +285,7 @@ class Arm:
         """
         if not protect and (np.any(theta < self.joint_mins) or np.any(theta > self.joint_maxs)):
             theta = self.thetaProtector(theta)
-        self._theta = fsr.AngleMod(theta.reshape(len(theta)))
+        self._theta = fsr.angleMod(theta.reshape(len(theta)))
         end_effector_transform = tm(fmr.FKinSpace(
             self.end_effector_home.gTM(), self.screw_list, theta))
         self.end_effector_pos_global = end_effector_transform
@@ -323,12 +323,12 @@ class Arm:
             List of thetas, success boolean
         """
         if theta_init.size == 1:
-            theta_init = fsr.AngleMod(self._theta.reshape(len(self._theta)))
+            theta_init = fsr.angleMod(self._theta.reshape(len(self._theta)))
         if not protect:
             return self.constrainedIK(T, theta_init, check, level)
         theta, success = fmr.IKinSpace(self.screw_list, self.end_effector_home.gTM(),
             T.gTM(), theta_init, 0.00000001, 0.00000001)
-        theta = fsr.AngleMod(theta)
+        theta = fsr.angleMod(theta)
         self._theta = theta
         if success:
             self.end_effector_pos_global = T
@@ -487,7 +487,7 @@ class Arm:
             temp_moment[2], forcev[0], forcev[1], forcev[2]]).reshape((6, 1))
         for i in range(len(thetas)):
             candidate_theta, success =self.IK(T, thetas[i])
-            if success and sum(abs(fsr.Error(self.FK(candidate_theta), T))) < .0001:
+            if success and sum(abs(fsr.poseError(self.FK(candidate_theta), T))) < .0001:
                 force_thetas.append(candidate_theta)
         max_force = []
         for i in range(len(force_thetas)):
@@ -552,7 +552,7 @@ class Arm:
         """
         #free_thetas = fsolve(@(x)(obj.FK(SetElements(theta_init,
             #freeinds, x))-T), theta_init(freeinds))
-        res = lambda x : fsr.TAAtoTM(self.FK(fsr.SetElements(theta_init, inds, x))-T)
+        res = lambda x : fsr.TAAtoTM(self.FK(fsr.setElements(theta_init, inds, x))-T)
         #Use newton_krylov instead of fsolve
         free_thetas = sci.optimize.fsolve(res, theta_init[inds])
         # free_thetas = fsolve(@(x)(self.FK(SetElements(theta_init,
@@ -649,8 +649,8 @@ class Arm:
         self.screw_list_body = np.zeros((6, new_screw_list.shape[1]))
         if new_joint_poses_home.size > 1:
             for i in range(0, new_screw_list.shape[1]):
-                self.joint_poses_home[0:3, i] = fsr.TrVec(new_thetas, new_joint_poses_home[0:3, i])
-                #Convert TrVec
+                self.joint_poses_home[0:3, i] = fsr.transformByVector(new_thetas, new_joint_poses_home[0:3, i])
+                #Convert transformByVector
         for i in range(0, new_screw_list.shape[1]):
             self.screw_list[:, i] = fmr.Adjoint(new_thetas.gTM()) @ new_screw_list[:, i]
             if new_joint_poses_home.size <= 1:
@@ -708,12 +708,12 @@ class Arm:
         count = 0
         while not satisfied and count < 2500:
             count+=1
-            error = fsr.Error(target, initial).gTAA().flatten()
+            error = fsr.poseError(target, initial).gTAA().flatten()
             satisfied = True
             for i in range(6):
                 if abs(error[i]) > tol[i]:
                     satisfied = False
-            initial = fsr.CloseGap(initial, target, delt)
+            initial = fsr.closeLinearGap(initial, target, delt)
             theta_list.append(np.copy(self._theta))
             self.IK(initial, self._theta)
         self.IK(target, self._theta)
@@ -769,7 +769,7 @@ class Arm:
                     pose_adjust[1] = .01
                     at_target = False
                 if at_target:
-                    d = fsr.Distance(self.end_effector_pos_global, target)
+                    d = fsr.distance(self.end_effector_pos_global, target)
                     print(d)
                     if d < .985:
                         done = False
@@ -815,7 +815,7 @@ class Arm:
         scale = Kp @ error_ee_to_goal + Kd @ min(0, delt_distance_to_goal)
 
         twist = self.TwistSpaceToGoalEE(theta, goal_position)
-        twist_norm = fsr.TwistNorm(twist)
+        twist_norm = fsr.NormalizeTwist(twist)
         normalized_twist = twist/twist_norm
         theta_dot = self.ThetadotSpace(theta, normalized_twist)
         scaled_theta_dot = max_theta_dot/max(abs(theta_dot)) @ theta_dot @ scale
@@ -1323,7 +1323,7 @@ class Arm:
         """
         jacobian = np.zeros((6, theta.size))
         temp = lambda x : np.reshape(self.FK(x),((1, 16)))
-        numerical_jacobian = fsr.NumJac(temp, theta, 0.006)
+        numerical_jacobian = fsr.numericalJacobian(temp, theta, 0.006)
         for i in range(0, np.size(theta)):
             jacobian[0:6, i] = (fmr.se3ToVec(ling.inv(self.FK(theta).conj().T) @
                 np.reshape(numerical_jacobian[:, i],((4, 4))).conj().T))
@@ -1674,7 +1674,7 @@ def loadArmFromJSON(file_name):
 
     box_spatial = np.zeros((num_dof, 6, 6))
     for i in range(num_dof):
-        box_spatial[i,:,:] = fsr.BoxSpatialInertia(
+        box_spatial[i,:,:] = fsr.boxSpatialInertia(
             masses[i], dimensions[0, i], dimensions[1, i], dimensions[2, i])
     arm = Arm(base_location, screw_list,
         end_effector_home, joint_home_positions, joint_axes)
