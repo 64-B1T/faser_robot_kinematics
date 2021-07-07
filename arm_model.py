@@ -1,4 +1,4 @@
-from faser_math import tm, fmr, fsr
+`from faser_math import tm, fmr, fsr
 from faser_plotting.Draw.Draw import DrawArm, DrawRectangle
 from faser_utils.disp.disp import disp
 import numpy as np
@@ -1432,7 +1432,8 @@ class URDFLoader:
         self.id = None
         self.name = None
         self.parent = None
-        self.child = None
+        self.children = []
+        self.num_children = 0
 
 def loadArmFromURDF(file_name):
     """
@@ -1519,6 +1520,31 @@ def loadArmFromURDF(file_name):
 
                 new_element.xyz_origin = cg_origin_tm
 
+    def findNamedElement(named_element):
+        for element in elements:
+            if element.name == named_element:
+                return element
+
+    def totalChildren(element):
+        if element.num_children == 0:
+            return 1
+        else:
+            sum_children = 0
+            for child in element.children:
+                sum_children += totalChildren(child)
+            return sum_children
+
+
+    def mostChildren(element):
+        most_children = totalChildren(element.children[0])
+        max_ind = 0
+        for i in range(element.num_children):
+            child_qty = totalChildren(element.children[i])
+            if child_qty > most_children:
+                max_ind = i
+                most_children = child_qty
+        return element.children[max_ind]
+
     #Perform First Pass Parse
     for child in root:
         new_element = URDFLoader()
@@ -1531,19 +1557,6 @@ def loadArmFromURDF(file_name):
             completeJointParse(new_element, child)
         elements.append(new_element)
 
-
-    def findNamedElement(named_element):
-        for element in elements:
-            if element.name == named_element:
-                return element
-
-    def printElements(elements):
-        for element in elements:
-            print("Name: " + str(element.name)
-                + ", Type: " + str(element.type)
-                + ", SubType: " + str(element.sub_type)
-                + ", Parent: " + str(element.parent)
-                + ", Child: " + str(element.child))
 
     world_link = URDFLoader()
     world_link.type = 'link'
@@ -1563,18 +1576,21 @@ def loadArmFromURDF(file_name):
             parent_element = findNamedElement(parent_name)
             child_element = findNamedElement(child_name)
             this_element.parent = parent_element
-            parent_element.child = this_element
+            parent_element.children.append(this_element)
+            parent_element.num_children += 1
             child_element.parent = this_element
-            this_element.child = child_element
+            this_element.children.append(child_element)
+            this_element.num_children += 1
 
     #Account for cases that don't use world
-    if world_link.child is None:
+    if world_link.num_children == 0:
         elements.remove(world_link)
         for element in elements:
-            if element.type == 'link' and element.parent is None:
+            if element.type == 'link' and element.parent is None and element.num_children > 0:
                 world_link = element
                 break
-            elif element.type == 'joint' and element.sub_type == 'fixed' and element.parent is None:
+            elif (element.type == 'joint' and element.sub_type == 'fixed' and
+                    element.parent is None and element.num_children > 0):
                 world_link = element
                 break
     num_dof = 0
@@ -1592,18 +1608,25 @@ def loadArmFromURDF(file_name):
 
     #Figure out the link home poses
     temp_element = world_link
-    while temp_element.child is not None:
+    while temp_element.num_children > 0:
         if temp_element.type == 'link' or temp_element.sub_type == 'fixed':
-            temp_element = temp_element.child
+            temp_element = mostChildren(temp_element)
             continue
         joint_poses.append(joint_poses[-1] @ temp_element.xyz_origin)
-        joint_axes[0:3, arrind] = temp_element.axis
+
+        if np.isclose(abs(joint_poses[-1][3]), np.pi/2):
+            joint_axes[0:3, arrind] = np.array([0, 1, 0])
+        elif np.isclose(abs(joint_poses[-1][4]), np.pi/2):
+            joint_axes[0:3, arrind] = np.array([1, 0, 0])
+        else:
+            joint_axes[0:3, arrind] = temp_element.axis
+        #joint_axes[0:3, arrind] = temp_element.axis
         joint_homes[0:3, arrind] = joint_poses[-1][0:3].flatten()
-        temp_element = temp_element.child
+        temp_element = mostChildren(temp_element)
         arrind+=1
 
-    disp(arrind)
-    printElements(elements)
+    disp(joint_poses, "Joint poses")
+
     #Build the screw list
     screw_list = np.zeros((6, num_dof))
     for i in range(num_dof):
