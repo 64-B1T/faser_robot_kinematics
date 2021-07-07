@@ -1550,10 +1550,10 @@ def loadArmFromURDF(file_name):
         joint_rotation = tm([joint_location[3], joint_location[4], joint_location[5]])
         axis_unit = tm([axis[0], axis[1], axis[2], 0, 0, 0])
         axis_new = (joint_rotation @ axis_unit)[0:3]
-        if sum(abs(axis)) > 0:
-            axis_new = abs(axis_new)
-        else:
-            axis_new = abs(axis_new) * -1
+        #if sum(abs(axis)) > 0:
+        #    axis_new = abs(axis_new)
+        #else:
+        #    axis_new = abs(axis_new) * -1
         return axis_new.flatten()
 
 
