@@ -1,4 +1,4 @@
-`from faser_math import tm, fmr, fsr
+from faser_math import tm, fmr, fsr
 from faser_plotting.Draw.Draw import DrawArm, DrawRectangle
 from faser_utils.disp.disp import disp
 import numpy as np
@@ -1491,9 +1491,10 @@ def loadArmFromURDF(file_name):
         return inertia_matrix
 
     def completeLinkParse(new_element, parent):
+        #print(new_element.name)
         for child in parent:
             if child.tag == 'inertial':
-                cg_xyz_raw, cg_rpy_raw = extractOrigin(child)
+                cg_xyz_raw, cg_rpy_raw = extractOrigin(child.find('origin'))
                 cg_origin_xyz = np.array(cg_xyz_raw, dtype=float)
                 cg_origin_rpy = np.array(cg_rpy_raw, dtype=float)
 
@@ -1505,7 +1506,7 @@ def loadArmFromURDF(file_name):
                 new_element.mass = float(child.find('mass').get('value'))
 
     def completeJointParse(new_element, parent):
-        print(new_element.name)
+        #print(new_element.name)
         for child in parent:
             if child.tag == 'axis':
                 axis = np.array(child.get('xyz').split(), dtype=float)
@@ -1544,6 +1545,17 @@ def loadArmFromURDF(file_name):
                 max_ind = i
                 most_children = child_qty
         return element.children[max_ind]
+
+    def determineAxis(joint_location, axis):
+        joint_rotation = tm([joint_location[3], joint_location[4], joint_location[5]])
+        axis_unit = tm([axis[0], axis[1], axis[2], 0, 0, 0])
+        axis_new = (joint_rotation @ axis_unit)[0:3]
+        if sum(abs(axis)) > 0:
+            axis_new = abs(axis_new)
+        else:
+            axis_new = abs(axis_new) * -1
+        return axis_new.flatten()
+
 
     #Perform First Pass Parse
     for child in root:
@@ -1594,10 +1606,12 @@ def loadArmFromURDF(file_name):
                 world_link = element
                 break
     num_dof = 0
-    #Count the number of degrees of freedom
-    for element in elements:
-        if element.type == 'joint' and element.sub_type != 'fixed':
+    #Count the number of degrees of freedom along longest kinematic chain
+    temp_element = world_link
+    while temp_element.num_children > 0:
+        if temp_element.type == 'joint' and temp_element.sub_type != 'fixed':
             num_dof += 1
+        temp_element = mostChildren(temp_element)
 
     home = tm()
     joint_poses = [home]
@@ -1614,18 +1628,19 @@ def loadArmFromURDF(file_name):
             continue
         joint_poses.append(joint_poses[-1] @ temp_element.xyz_origin)
 
-        if np.isclose(abs(joint_poses[-1][3]), np.pi/2):
-            joint_axes[0:3, arrind] = np.array([0, 1, 0])
-        elif np.isclose(abs(joint_poses[-1][4]), np.pi/2):
-            joint_axes[0:3, arrind] = np.array([1, 0, 0])
-        else:
-            joint_axes[0:3, arrind] = temp_element.axis
-        #joint_axes[0:3, arrind] = temp_element.axis
+        # The Below Works, But We Can Do better
+        #if np.isclose(abs(joint_poses[-1][3]), np.pi/2):
+        #    joint_axes[0:3, arrind] = np.array([0, 1, 0])
+        #elif np.isclose(abs(joint_poses[-1][4]), np.pi/2):
+        #    joint_axes[0:3, arrind] = np.array([1, 0, 0])
+        #else:
+        #    joint_axes[0:3, arrind] = temp_element.axis
+        joint_axes[0:3, arrind] = determineAxis(joint_poses[-1], temp_element.axis)
         joint_homes[0:3, arrind] = joint_poses[-1][0:3].flatten()
         temp_element = mostChildren(temp_element)
         arrind+=1
 
-    disp(joint_poses, "Joint poses")
+    #disp(joint_poses, "Joint poses")
 
     #Build the screw list
     screw_list = np.zeros((6, num_dof))
@@ -1636,8 +1651,9 @@ def loadArmFromURDF(file_name):
 
     arm = Arm(tm(), screw_list, joint_poses[-1], joint_homes, joint_axes)
     arm.link_home_positions = joint_poses[1:]
-    disp(joint_poses[1:], "intended")
+    #disp(joint_poses[1:], "intended")
 
+    #Placeholder Dimensions
     dims = np.zeros((3, num_dof + 1))
     for i in range(num_dof + 1):
         dims[0:3,
