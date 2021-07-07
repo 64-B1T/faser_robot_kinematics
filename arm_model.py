@@ -1650,7 +1650,7 @@ def loadArmFromURDF(file_name):
             np.cross(joint_homes[0:3, i], joint_axes[0:3, i])))
 
     arm = Arm(tm(), screw_list, joint_poses[-1], joint_homes, joint_axes)
-    arm.link_home_positions = joint_poses[1:]
+    arm.link_home_positions = joint_poses
     #disp(joint_poses[1:], "intended")
 
     #Placeholder Dimensions
