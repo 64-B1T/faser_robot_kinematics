@@ -1622,11 +1622,20 @@ def loadArmFromURDF(file_name):
 
     #Figure out the link home poses
     temp_element = world_link
+    masses = []
+    masses_cg = []
+    link_names = []
+    joint_names = []
     while temp_element.num_children > 0:
         if temp_element.type == 'link' or temp_element.sub_type == 'fixed':
+            if temp_element.type == 'link':
+                masses.append(temp_element.mass)
+                masses_cg.append(temp_element.xyz_origin)
+                link_names.append(temp_element.name)
             temp_element = mostChildren(temp_element)
             continue
         joint_poses.append(joint_poses[-1] @ temp_element.xyz_origin)
+        joint_names.append(temp_element.name)
 
         # The Below Works, But We Can Do better
         #if np.isclose(abs(joint_poses[-1][3]), np.pi/2):
@@ -1640,6 +1649,7 @@ def loadArmFromURDF(file_name):
         temp_element = mostChildren(temp_element)
         arrind+=1
 
+
     #disp(joint_poses, "Joint poses")
 
     #Build the screw list
@@ -1651,6 +1661,10 @@ def loadArmFromURDF(file_name):
 
     arm = Arm(tm(), screw_list, joint_poses[-1], joint_homes, joint_axes)
     arm.link_home_positions = joint_poses
+    arm.masses = masses
+    arm.masses_cg = masses_cg
+    arm.link_names = link_names
+    arm.joint_names = joint_names
     #disp(joint_poses[1:], "intended")
 
     #Placeholder Dimensions
