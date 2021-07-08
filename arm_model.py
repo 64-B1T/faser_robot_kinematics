@@ -39,6 +39,7 @@ class Arm:
         self.box_spatial_links = 0
         self.link_home_positions = None
         self.link_dimensions = None
+        self.grav = np.array([0, 0, -9.81])
         self.fail_count = 0
         for i in range(0, screw_list.shape[1]):
             self.screw_list_body[:, i] = (fmr.Adjoint(self.end_effector_home.inv().gTM()) @
@@ -64,6 +65,7 @@ class Arm:
             joint_poses_home: joint_poses_home list for arm
         """
         self.screw_list = screw_list
+        self.num_dof = np.shape(screw_list)[1]
         self.original_screw_list_body = np.copy(screw_list)
         self.base_pos_global = base_pos_global
         self.original_joint_poses_home = joint_poses_home
@@ -1003,6 +1005,31 @@ class Arm:
         temp = lambda x : (self.staticForces(theta, x[0:6])-tau)
         end_effector_wrench = sci.optimize.fsolve(temp, x_init)
         return end_effector_wrench[0:6]
+
+    def staticForceWithLinkMasses(self, theta, end_effector_wrench):
+        """
+        Calculate Static Forces with Link Masses. Dependent on Loading URDF Prior
+
+        Args:
+            theta: joint configuration to analyze
+            end_effector_wrench: wrench at the end effector (can be zeros)
+        Returns:
+            tau: joint torques of the robot
+        """
+        end_effector_temp = self.FK(theta)
+        jacobian = self.jacobian(theta)
+        tau_init = jacobian.T @ end_effector_wrench
+        carry_wrench = end_effector_wrench
+        joint_poses = self.getJointTransforms()
+
+        for i in range(self.num_dof, 0, -1):
+            link_mass_cg = self.masses_cg[i]
+            link_mass = self.masses[i]
+            applied_pos_global = joint_poses[i] @ link_mass_cg
+            carry_wrench = carry_wrench + fsr.makeWrench(applied_pos_global, link_mass, self.grav)
+            tau = jacobian[0:6, 0:i].T @ carry_wrench
+            tau_init[i-1] = tau[-1]
+        return tau_init
 
     def inverseDynamics(self, theta, theta_dot, theta_dot_dot, grav, end_effector_wrench):
         """
