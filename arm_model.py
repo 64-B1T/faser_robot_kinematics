@@ -1462,6 +1462,13 @@ class URDFLoader:
         self.children = []
         self.num_children = 0
 
+        self.vis_type = None
+        self.vis_origin = None
+        self.vis_properties = []
+        self.col_type = None
+        self.col_origin = None
+        self.col_properties = []
+
 def loadArmFromURDF(file_name):
     """
     Load an arm from a URDF File
@@ -1517,6 +1524,36 @@ def loadArmFromURDF(file_name):
             [ixz, iyz, izz]], dtype=float)
         return inertia_matrix
 
+    def completeGeometryParse(child):
+        type = 'box'
+        origin = tm()
+        properties = []
+        for grand_child in child:
+            if grand_child.tag == 'origin':
+                origin = extractOrigin(grand_child)
+            elif grand_child.tag == 'geometry':
+                geometry = child.find('geometry')
+                if geometry.tag == 'box':
+                    type = 'box'
+                    properties = geometry.get('size').split()
+                elif geometry.tag == 'cylinder':
+                    type = 'cyl'
+                    properties.append(geometry.get('radius'))
+                    properties.append(geometry.get('length'))
+                elif geometry.tag == 'sphere':
+                    type = 'spr'
+                    properties = geometry.get('radius')
+                elif geometry.tag == 'mesh':
+                    type = 'msh'
+                    properties = []
+                    properties.append(geometry.get('filename'))
+                    try:
+                        properties.append(geometry.get('scale'))
+                    except:
+                        properties.append(1.0)
+            return type, origin, properties
+
+
     def completeLinkParse(new_element, parent):
         #print(new_element.name)
         for child in parent:
@@ -1531,6 +1568,12 @@ def loadArmFromURDF(file_name):
                 new_element.xyz_origin = cg_origin_tm
                 new_element.inertia = completeInertiaExtraction(child)
                 new_element.mass = float(child.find('mass').get('value'))
+            elif child.tag == 'visual':
+                new_element.vis_type, new_element.vis_origin, new_element.vis_properties = \
+                        completeGeometryParse(child)
+            elif child.tag == 'collision':
+                new_element.col_type, new_element.col_origin, new_element.col_properties = \
+                        completeGeometryParse(child)
 
     def completeJointParse(new_element, parent):
         #print(new_element.name)
@@ -1653,12 +1696,18 @@ def loadArmFromURDF(file_name):
     masses_cg = []
     link_names = []
     joint_names = []
+    vis_props = []
+    col_props = []
     while temp_element.num_children > 0:
         if temp_element.type == 'link' or temp_element.sub_type == 'fixed':
             if temp_element.type == 'link':
                 masses.append(temp_element.mass)
                 masses_cg.append(temp_element.xyz_origin)
                 link_names.append(temp_element.name)
+                vis_props.append([temp_element.vis_type,
+                        temp_element.vis_origin, temp_element.vis_properties])
+                col_props.append([temp_element.col_type,
+                        temp_element.col_origin, temp_element.col_properties])
             temp_element = mostChildren(temp_element)
             continue
         joint_poses.append(joint_poses[-1] @ temp_element.xyz_origin)
