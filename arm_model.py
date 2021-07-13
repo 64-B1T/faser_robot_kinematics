@@ -1524,6 +1524,14 @@ class URDFLoader:
 
 
 def load_urdf_spec_file(urdf_fname, package_fname):
+    """
+    Return a file path from a urdf specified file.
+    Args:
+        urdf_fname: urdf file name
+        package_fname: package_fname
+    Returns:
+        string of the absolute path
+    """
     if 'package://' in package_fname:
         return find_package_dir(urdf_fname, package_fname)
     elif package_fname[0:3] == '../':
@@ -1531,6 +1539,14 @@ def load_urdf_spec_file(urdf_fname, package_fname):
     else:
         return package_fname
 def find_package_dir(urdf_fname, package_rel_dir):
+    """
+    Attempts to find a directory specified by a ros package macro without ROS
+    Args:
+        urdf_fname: urdf file name/path *must be absolute
+        package_rel_dir: relative package directory
+    Returns:
+        string of the absolute file path
+    """
     real_path = os.path.abspath(urdf_fname)
     real_split_path = real_path.split('/')
     package_name = '/'.join(package_rel_dir[9:].split('/')[1:])
