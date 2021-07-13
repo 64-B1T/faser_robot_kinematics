@@ -1523,6 +1523,28 @@ class URDFLoader:
             print('\tMax Velocity: ' + str(self.max_velocity))
 
 
+def load_urdf_spec_file(urdf_fname, package_fname):
+    if 'package://' in package_fname:
+        return find_package_dir(urdf_fname, package_fname)
+    elif package_fname[0:3] == '../':
+        return os.path.abspath(package_fname)
+    else:
+        return package_fname
+def find_package_dir(urdf_fname, package_rel_dir):
+    real_path = os.path.abspath(urdf_fname)
+    real_split_path = real_path.split('/')
+    package_name = '/'.join(package_rel_dir[9:].split('/')[1:])
+
+    found_path = False
+    i = len(real_split_path) - 1
+    while not found_path and i > 0:
+        test_path_prefix = '/'.join(real_split_path[0:i])
+        test_path = test_path_prefix + '/' + package_name
+        if os.path.isfile(test_path):
+            #print(test_path)
+            return test_path
+        i -= 1
+    #print(package_name)
 
 def loadArmFromURDF(file_name):
     """
@@ -1613,8 +1635,7 @@ def loadArmFromURDF(file_name):
                         properties = geometry.get('radius')
                     elif geometry.tag == 'mesh':
                         type = 'msh'
-                        properties = []
-                        properties.append(geometry.get('filename'))
+                        properties.append(load_urdf_spec_file(file_name, geometry.get('filename')))
                         properties.append(geometry.get('scale'))
                         if properties[1] is None:
                             properties[1] = 1.0
@@ -1819,6 +1840,8 @@ def loadArmFromURDF(file_name):
     arm.joint_maxs = np.array(joint_maxs)
     arm.max_vels = np.array(joint_vel_limits)
     arm.max_effort = np.array(joint_effort_limits)
+    arm.vis_props = vis_props
+    arm.col_props = col_props
     #disp(joint_poses[1:], 'intended')
 
     #Placeholder Dimensions
