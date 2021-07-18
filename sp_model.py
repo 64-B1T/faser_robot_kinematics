@@ -55,7 +55,7 @@ class SP:
         self.leg_ext_max = leg_ext_max
 
         #Reserve Val
-        self.nominal_height = fsr.Distance(bT, tT)
+        self.nominal_height = fsr.distance(bT, tT)
         self.nominal_plate_transform = tm([0, 0, self.nominal_height, 0, 0, 0])
 
         #Drawing Characteristics
@@ -107,22 +107,22 @@ class SP:
         self.bottom_joint_angles_init = [None] * 6
         self.bottom_joint_angles = [None] * 6
         for i in range(6):
-            self.bottom_joint_angles_init[i] = fsr.GlobalToLocal(self.getBottomT(),
+            self.bottom_joint_angles_init[i] = fsr.globalToLocal(self.getBottomT(),
                 tm([self.top_joints_space.T[i][0], self.top_joints_space.T[i][1],
                 self.top_joints_space.T[i][2], 0, 0, 0]))
-            self.bottom_joint_angles[i] = fsr.GlobalToLocal(self.getTopT(),
+            self.bottom_joint_angles[i] = fsr.globalToLocal(self.getTopT(),
                 tm([self.bottom_joints_space.T[i][0], self.bottom_joints_space.T[i][1],
                 self.bottom_joints_space.T[i][2], 0, 0, 0]))
 
-        t1 = fsr.GlobalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
+        t1 = fsr.globalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
             tm([self.top_joints_space[0, 0],
             self.top_joints_space[1, 0],
             self.top_joints_space[2, 0], 0, 0, 0]))
-        t2 = fsr.GlobalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
+        t2 = fsr.globalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
             tm([self.top_joints_space[0, 2],
             self.top_joints_space[1, 2],
             self.top_joints_space[2, 2], 0, 0, 0]))
-        t3 = fsr.GlobalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
+        t3 = fsr.globalToLocal(self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]),
             tm([self.top_joints_space[0, 4],
             self.top_joints_space[1, 4],
             self.top_joints_space[2, 4], 0, 0, 0]))
@@ -317,12 +317,12 @@ class SP:
         top_act_joint = tm([self.top_joints_space[0, num],
             self.top_joints_space[1, num], self.top_joints_space[2, num], 0, 0, 0])
         if type == 'b':
-            #return fsr.TMMidRotAdjust(bottom_act_joint, bottom_act_joint,
+            #return fsr.adjustRotationToMidpoint(bottom_act_joint, bottom_act_joint,
             #   top_act_joint, mode = 1) @ tm([0, 0, self.act_motor_grav_center, 0, 0, 0])
             return self.fsr.getUnitVec(bottom_act_joint,
                 top_act_joint, self.act_motor_grav_center)
         if type == 't':
-            #return fsr.TMMidRotAdjust(top_act_joint, top_act_joint, bottom_act_joint,
+            #return fsr.adjustRotationToMidpoint(top_act_joint, top_act_joint, bottom_act_joint,
             #   mode = 1) @ tm([0, 0, self.act_shaft_grav_center, 0, 0, 0])
             return self.fsr.getUnitVec(top_act_joint,
                 bottom_act_joint, self.act_shaft_grav_center)
@@ -420,7 +420,7 @@ class SP:
                 self.top_joints,
                 self.bottom_joints_space,
                  self.top_joints_space)
-        self.current_plate_transform_local = fsr.GlobalToLocal(
+        self.current_plate_transform_local = fsr.globalToLocal(
                 bottom_plate_pos, top_plate_pos)
         return np.copy(self.lengths), bottom_plate_pos, top_plate_pos
 
@@ -453,7 +453,7 @@ class SP:
             #self.IK(top_plate_pos = self.getBottomT() @ tm([0, 0, self.nominal_height, 0, 0, 0]))
             #self.FK(L, protect = True)
             self.fixUpsideDown()
-        self.current_plate_transform_local = fsr.GlobalToLocal(bottom, top)
+        self.current_plate_transform_local = fsr.globalToLocal(bottom, top)
         #self._undoPlateTransform(bottom, top)
         valid = True
         if not protect:
@@ -513,7 +513,7 @@ class SP:
         while not success and iter < max_iterations:
             x = x + self.inverseJacobianSpace(bottom_plate_pos, x ) @ (L -
                 self.IK(top_plate_pos = x, protect = protect))
-            x.AngleMod()
+            x.angleMod()
             #disp(x)
             if np.all(abs(x[0:3]) < tol_f) and np.all(abs(x[3:6]) < tol_a):
                 success = True
@@ -610,8 +610,8 @@ class SP:
         #   fsr.TM([0, 0, self.nominal_height, 0, 0, 0])).reshape((6))
         #disp(a, "Attempt")
         try:
-            #ap = (fsr.LocalToGlobal(tm([0, 0, self.nominal_height, 0, 0, 0]), tm()))
-            ap = (fsr.LocalToGlobal(self.current_plate_transform_local, tm())).gTAA().reshape((6))
+            #ap = (fsr.localToGlobal(tm([0, 0, self.nominal_height, 0, 0, 0]), tm()))
+            ap = (fsr.localToGlobal(self.current_plate_transform_local, tm())).gTAA().reshape((6))
             a = np.zeros((6))
             for i in range(6):
                 a[i] = ap[i]
@@ -672,22 +672,22 @@ class SP:
             stopt (tm): top transform in space frame.
 
         Returns:
-            ndarray(Float): Distances array
+            ndarray(Float): distances array
 
         """
-        reorient_helper_1 = fsr.LocalToGlobal(stopt, self.reorients[0])
-        reorient_helper_2 = fsr.LocalToGlobal(stopt, self.reorients[1])
-        reorient_helper_3 = fsr.LocalToGlobal(stopt, self.reorients[2])
+        reorient_helper_1 = fsr.localToGlobal(stopt, self.reorients[0])
+        reorient_helper_2 = fsr.localToGlobal(stopt, self.reorients[1])
+        reorient_helper_3 = fsr.localToGlobal(stopt, self.reorients[2])
 
-        d1 = fsr.Distance(reorient_helper_1,
+        d1 = fsr.distance(reorient_helper_1,
             tm([self.top_joints_space[0, 0],
             self.top_joints_space[1, 0],
             self.top_joints_space[2, 0], 0, 0, 0]))
-        d2 = fsr.Distance(reorient_helper_2,
+        d2 = fsr.distance(reorient_helper_2,
             tm([self.top_joints_space[0, 2],
             self.top_joints_space[1, 2],
             self.top_joints_space[2, 2], 0, 0, 0]))
-        d3 = fsr.Distance(reorient_helper_3,
+        d3 = fsr.distance(reorient_helper_3,
             tm([self.top_joints_space[0, 4],
             self.top_joints_space[1, 4],
             self.top_joints_space[2, 4], 0, 0, 0]))
@@ -716,7 +716,7 @@ class SP:
         This function can be used to mirror all the joint locations and "fix" the resultant problem
         """
         for num in range(6):
-            #reversable = fsr.GlobalToLocal(tm([self.top_joints_space[0, num],
+            #reversable = fsr.globalToLocal(tm([self.top_joints_space[0, num],
             #    self.top_joints_space[1, num], self.top_joints_space[2, num], 0, 0, 0]),
             #    tm([self.bottom_joints_space[0, num],
             #    self.bottom_joints_space[1, num],
@@ -724,16 +724,17 @@ class SP:
             #newTJ = tm([self.bottom_joints_space[0, num],
             #    self.bottom_joints_space[1, num],
             #    self.bottom_joints_space[2, num], 0, 0, 0]) @ reversable
-            newTJ = fsr.Mirror(self.getBottomT() @ tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
+            newTJ = fsr.mirror(self.getBottomT() @
+                tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
                 tm([self.top_joints_space[0, num],
                 self.top_joints_space[1, num],
                 self.top_joints_space[2, num], 0, 0, 0]))
             self.top_joints_space[0, num] = newTJ[0]
             self.top_joints_space[1, num] = newTJ[1]
             self.top_joints_space[2, num] = newTJ[2]
-            self.lengths[num] = fsr.Distance(
+            self.lengths[num] = fsr.distance(
                 self.top_joints_space[:, num], self.bottom_joints_space[:, num])
-        top_true = fsr.Mirror(self.getBottomT() @ tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
+        top_true = fsr.mirror(self.getBottomT() @ tm([0, 0, -self.bottom_plate_thickness, 0, 0, 0]),
             self.getTopT() @ tm([0, 0, -self.top_plate_thickness, 0, 0, 0]))
         top_true[3:6] = self.getTopT()[3:6] * -1
         self.top_plate_pos = top_true @ tm([0, 0, self.top_plate_thickness, 0, 0, 0])
@@ -744,7 +745,8 @@ class SP:
         Validates leg lengths against leg minimums and maximums
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -767,7 +769,8 @@ class SP:
         Ensures that the top plate is always locally above the bottom plate
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -789,7 +792,8 @@ class SP:
         Ensures that interior angles do not violate angular limits
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -813,7 +817,8 @@ class SP:
         Ensures plate rotation does not validate limits
         Args:
             valid (Bool): whether to start the validator with an assumption of prior validity
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
 
         Returns:
             Bool: Validity of configuration
@@ -837,7 +842,8 @@ class SP:
         """
         Validate the current configuration of the stewart platform
         Args:
-            donothing (Bool): If set to true, even if an invalid configuration is detected, will not attempt to correct it
+            donothing (Bool): If set to true, even if an invalid configuration is detected,
+                will not attempt to correct it
             validation_limit (Int): Description of parameter `validation_limit`.
 
         Returns:
@@ -848,7 +854,7 @@ class SP:
         #if self.debug:
         #    disp("Validating")
         #First check to make sure leg lengths are not exceeding limit points
-        if fsr.Distance(self.getTopT(), self.getBottomT()) > 2 * self.nominal_height:
+        if fsr.distance(self.getTopT(), self.getBottomT()) > 2 * self.nominal_height:
             valid = False
 
         if validation_limit > 0: valid = self.validateLegs(valid, donothing)
@@ -984,7 +990,7 @@ class SP:
         valid = True
         bot = self.getBottomT()
         for i in range(6):
-            if fsr.GlobalToLocal(self.getBottomT(), self.getTopT())[2] < 0:
+            if fsr.globalToLocal(self.getBottomT(), self.getTopT())[2] < 0:
                 valid = False
         return valid
 
@@ -1044,18 +1050,18 @@ class SP:
                 top_to_bottom_local_home = self.bottom_joint_angles[i].copy()
 
                 #We acquire the current relative (local positions of each)
-                bottom_to_top_local = fsr.GlobalToLocal(self.getBottomT(), top_joint_i)
-                top_to_bottom_local = fsr.GlobalToLocal(self.getTopT(), bottom_joint_i)
+                bottom_to_top_local = fsr.globalToLocal(self.getBottomT(), top_joint_i)
+                top_to_bottom_local = fsr.globalToLocal(self.getTopT(), bottom_joint_i)
 
                 #We acquire the base positions of each joint
-                bottom_to_bottom_local = fsr.GlobalToLocal(self.getBottomT(), bottom_joint_i)
-                top_to_top_local = fsr.GlobalToLocal(self.getTopT(), top_joint_i)
+                bottom_to_bottom_local = fsr.globalToLocal(self.getBottomT(), bottom_joint_i)
+                top_to_top_local = fsr.globalToLocal(self.getTopT(), top_joint_i)
 
-                delta_angles_bottom[i] = fsr.AngleBetween(
+                delta_angles_bottom[i] = fsr.angleBetween(
                     bottom_to_top_local,
                     bottom_to_bottom_local,
                     bottom_to_top_local_home)
-                delta_angles_top[i] = fsr.AngleBetween(
+                delta_angles_top[i] = fsr.angleBetween(
                     top_to_bottom_local,
                     top_to_top_local,
                     top_to_bottom_local_home)
@@ -1079,11 +1085,11 @@ class SP:
             top_joints_temp[2] = 0
             bottom_joints_temp = self.bottom_joints_space[:, i].copy().flatten()
             bottom_joints_temp[2] = bottom_joints_temp[2] + 1
-            angle = fsr.AngleBetween(
+            angle = fsr.angleBetween(
                 self.bottom_joints_space[:, i],
                 self.top_joints_space[:, i],
                 top_joints_temp)
-            angle_up = fsr.AngleBetween(
+            angle_up = fsr.angleBetween(
                 self.top_joints_space[:, i],
                 self.bottom_joints_space[:, i],
                 bottom_joints_temp)
@@ -1117,7 +1123,7 @@ class SP:
         for i in range(6):
             top_joint = self.top_joints_space[:, i].copy().flatten()
             top_joint[2] = 0
-            angle = fsr.AngleBetween(
+            angle = fsr.angleBetween(
                 self.bottom_joints_space[:, i],
                 self.top_joints_space[:, i],
                 top_joint)
@@ -1248,17 +1254,17 @@ class SP:
 
         """
         wrench = twrench.copy()
-        wrench = wrench + fsr.GenForceWrench(self.getTopT(),
+        wrench = wrench + fsr.makeWrench(self.getTopT(),
             self.top_plate_newton_force, self.dir)
         tau = self.measureForcesFromWrenchEE(self.getBottomT(),
             self.getTopT(), wrench, protect = protect)
         for i in range(6):
             #print(self.getActuatorLoc(i, 't'))
-            wrench += fsr.GenForceWrench(self.getActuatorLoc(i, 't'),
+            wrench += fsr.makeWrench(self.getActuatorLoc(i, 't'),
                 self.act_shaft_newton_force, self.dir)
-            wrench += fsr.GenForceWrench(self.getActuatorLoc(i, 'b'),
+            wrench += fsr.makeWrench(self.getActuatorLoc(i, 'b'),
                 self.act_motor_newton_force, self.dir)
-        wrench = wrench + fsr.GenForceWrench(self.getBottomT(),
+        wrench = wrench + fsr.makeWrench(self.getBottomT(),
             self.bottom_plate_newton_force, self.dir)
         return tau, wrench
 
@@ -1275,24 +1281,24 @@ class SP:
         """
         #We will here assume that the wrench is in the local frame of the top platform.
         wrench = twrench.copy()
-        wrench = wrench + fsr.GenForceWrench(tm(), self.top_plate_newton_force, self.dir)
+        wrench = wrench + fsr.makeWrench(tm(), self.top_plate_newton_force, self.dir)
         tau = self.measureForcesAtEENew(wrench, protect = protect)
-        wrench_local_frame = fsr.TransformWrenchFrame(wrench, self.getTopT(), self.getBottomT())
+        wrench_local_frame = fsr.transformWrenchFrame(wrench, self.getTopT(), self.getBottomT())
 
         for i in range(6):
             #print(self.getActuatorLoc(i, 't'))
             #The following representations are equivalent.
-            wrench_local_frame += fsr.GenForceWrench(fsr.GlobalToLocal(self.getActuatorLoc(i, 't'),
+            wrench_local_frame += fsr.makeWrench(fsr.globalToLocal(self.getActuatorLoc(i, 't'),
                 self.getBottomT()), self.act_shaft_newton_force, self.dir)
-            wrench_local_frame += fsr.GenForceWrench(fsr.GlobalToLocal(self.getActuatorLoc(i, 'b'),
+            wrench_local_frame += fsr.makeWrench(fsr.globalToLocal(self.getActuatorLoc(i, 'b'),
                 self.getBottomT()), self.act_motor_newton_force, self.dir)
-            #wrench_local_frame += fsr.TransformWrenchFrame(fsr.GenForceWrench(tm(),
+            #wrench_local_frame += fsr.transformWrenchFrame(fsr.makeWrench(tm(),
             #    self.act_shaft_newton_force, self.dir),
             #   self.getActuatorLoc(i, 't'), self.getBottomT())
-            #wrench_local_frame += fsr.TransformWrenchFrame(fsr.GenForceWrench(tm(),
+            #wrench_local_frame += fsr.transformWrenchFrame(fsr.makeWrench(tm(),
             #    self.act_motor_newton_force, self.dir),
             #   self.getActuatorLoc(i, 'b'), self.getBottomT())
-        wrench_local_frame = wrench_local_frame + fsr.GenForceWrench(tm(),
+        wrench_local_frame = wrench_local_frame + fsr.makeWrench(tm(),
             self.bottom_plate_newton_force, self.dir)
         return tau, wrench_local_frame
 
@@ -1326,16 +1332,16 @@ class SP:
 
         """
         wrench = twrench.copy()
-        wrench = wrench + fsr.GenForceWrench(self.getBottomT(),
+        wrench = wrench + fsr.makeWrench(self.getBottomT(),
             self.bottom_plate_mass * self.grav, np.array([0, 0, -1]))
         tau = self.measureForcesFromBottomEE(
             self.getBottomT(), self.getTopT(), wrench, protect = protect)
         for i in range(6):
-            wrench += fsr.GenForceWrench(
+            wrench += fsr.makeWrench(
                 self.getActuatorLoc(i, 't'), self.act_shaft_mass * self.grav, np.array([0, 0, -1]))
-            wrench += fsr.GenForceWrench(
+            wrench += fsr.makeWrench(
                 self.getActuatorLoc(i, 'b'), self.act_motor_mass * self.grav, np.array([0, 0, -1]))
-        wrench = wrench + fsr.GenForceWrench(
+        wrench = wrench + fsr.makeWrench(
             self.getTopT(), self.top_plate_mass * self.grav, np.array([0, 0, -1]))
         return tau, wrench
 
@@ -1361,7 +1367,7 @@ class SP:
         #top_wrench = fmr.Adjoint(ling.inv(top_plate_pos)).conj().transpose() @ top_plate_wrench
         #Modern Robotics 3.95 Fb = Ad(Tba)^T * Fa
         #top_wrench = top_plate_pos.inv().Adjoint().T @ top_plate_wrench
-        top_wrench = fsr.TransformWrenchFrame(top_plate_wrench, tm(), top_plate_pos)
+        top_wrench = fsr.transformWrenchFrame(top_plate_wrench, tm(), top_plate_pos)
         jacobian_space = ling.pinv(
             self.inverseJacobianSpace(bottom_plate_pos, top_plate_pos, protect = protect))
         tau = jacobian_space.T @ top_wrench
@@ -1451,11 +1457,11 @@ class SP:
         if forces is None:
             forces = self.leg_forces
 
-        wrench = fsr.GenForceWrench(tm(), 0, [0, 0, -1])
+        wrench = fsr.makeWrench(tm(), 0, [0, 0, -1])
         for i in range(6):
             unit_vector = fmr.Normalize(self.bottom_joints_space[:, i]-self.top_joints_space[:, i])
-            wrench += fsr.GenForceWrench(self.top_joints_space[:, i], float(forces[i]), unit_vector)
-        #wrench = fsr.TransformWrenchFrame(wrench, tm(), self.getTopT())
+            wrench += fsr.makeWrench(self.top_joints_space[:, i], float(forces[i]), unit_vector)
+        #wrench = fsr.transformWrenchFrame(wrench, tm(), self.getTopT())
         return wrench
 
 
@@ -1470,10 +1476,11 @@ class SP:
         #Moves the base of the stewart platform to a new location
 
 
-        self.current_plate_transform_local = fsr.GlobalToLocal(self.getBottomT(), self.getTopT())
+        self.current_plate_transform_local = fsr.globalToLocal(self.getBottomT(), self.getTopT())
         self.bottom_plate_pos = T.copy()
         self.IK(
-            top_plate_pos = fsr.LocalToGlobal(self.getBottomT(), self.current_plate_transform_local),
+            top_plate_pos = fsr.localToGlobal(self.getBottomT(),
+                    self.current_plate_transform_local),
             protect = protect)
 
     def printOutOfDateFunction(self, old_name, use_name):
@@ -1865,8 +1872,8 @@ def newSP(bottom_radius, top_radius, bJointSpace, tJointSpace,
     tj = np.zeros((3, 6))
 
     for i in range(0, 6):
-        bji = fsr.TransformFromTwist(bangles[i] * S) @ Mb
-        tji = fsr.TransformFromTwist(tangles[i] * S) @ Mt
+        bji = fsr.transformFromTwist(bangles[i] * S) @ Mb
+        tji = fsr.transformFromTwist(tangles[i] * S) @ Mt
         bj[0:3, i] = bji[0:3].reshape((3))
         tj[0:3, i] = tji[0:3].reshape((3))
         bj[2, i] = bottom_plate_thickness
@@ -1956,8 +1963,8 @@ def makeSP(bRad, tRad, spacing, baseT,
 
     #Generate position vectors (XYZ) for top and bottom joint locations
     for i in range(0, 6):
-        bji = fsr.TransformFromTwist(bangles[i] * S) @ Mb
-        tji = fsr.TransformFromTwist(tangles[i] * S) @ Mt
+        bji = fsr.transformFromTwist(bangles[i] * S) @ Mb
+        tji = fsr.transformFromTwist(tangles[i] * S) @ Mt
         bj[0:3, i] = bji[0:3].reshape((3))
         tj[0:3, i] = tji[0:3].reshape((3))
         bj[2, i] = plate_thickness_avg/2
@@ -1997,7 +2004,7 @@ def midHeightEstimate(leg_ext_min, leg_ext_max, bj, bth, tth):
 
     """
     s1 = (leg_ext_min + leg_ext_max) / 2
-    d1 = fsr.Distance(tm([bj[0, 0], bj[1, 0], bj[2, 0], 0, 0, 0]),
+    d1 = fsr.distance(tm([bj[0, 0], bj[1, 0], bj[2, 0], 0, 0, 0]),
             tm([bj[0, 1], bj[1, 1], bj[2, 1], 0, 0, 0]))
     hest = (np.sqrt(s1 ** 2 - d1 **2)) + bth + tth
     return hest
