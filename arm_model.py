@@ -35,6 +35,12 @@ class Arm:
         #Configure the arm given the base screws, the base transform.
         self.cameras = []
         self.num_dof = np.shape(screw_list)[1]
+        self.vis_props = None
+        self.col_props = None
+        self.link_names = []
+        for i in range(self.num_dof):
+            self.link_names.append('link' + str(i))
+        self.link_names.append('end_effector')
         self.initialize(base_pos_global, screw_list, end_effector_home, joint_poses_home)
         self.link_mass_transforms = 0
         self.box_spatial_links = 0
@@ -1523,44 +1529,6 @@ class URDFLoader:
             print('\tMax Velocity: ' + str(self.max_velocity))
 
 
-def load_urdf_spec_file(urdf_fname, package_fname):
-    """
-    Return a file path from a urdf specified file.
-    Args:
-        urdf_fname: urdf file name
-        package_fname: package_fname
-    Returns:
-        string of the absolute path
-    """
-    if 'package://' in package_fname:
-        return find_package_dir(urdf_fname, package_fname)
-    elif package_fname[0:3] == '../':
-        return os.path.abspath(package_fname)
-    else:
-        return package_fname
-def find_package_dir(urdf_fname, package_rel_dir):
-    """
-    Attempts to find a directory specified by a ros package macro without ROS
-    Args:
-        urdf_fname: urdf file name/path *must be absolute
-        package_rel_dir: relative package directory
-    Returns:
-        string of the absolute file path
-    """
-    real_path = os.path.abspath(urdf_fname)
-    real_split_path = real_path.split('/')
-    package_name = '/'.join(package_rel_dir[9:].split('/')[1:])
-
-    found_path = False
-    i = len(real_split_path) - 1
-    while not found_path and i > 0:
-        test_path_prefix = '/'.join(real_split_path[0:i])
-        test_path = test_path_prefix + '/' + package_name
-        if os.path.isfile(test_path):
-            #print(test_path)
-            return test_path
-        i -= 1
-    #print(package_name)
 
 def loadArmFromURDF(file_name):
     """
@@ -1651,7 +1619,8 @@ def loadArmFromURDF(file_name):
                         properties = geometry.get('radius')
                     elif geometry.tag == 'mesh':
                         type = 'msh'
-                        properties.append(load_urdf_spec_file(file_name, geometry.get('filename')))
+                        properties = []
+                        properties.append(geometry.get('filename'))
                         properties.append(geometry.get('scale'))
                         if properties[1] is None:
                             properties[1] = 1.0
