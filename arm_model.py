@@ -41,10 +41,10 @@ class Arm:
         for i in range(self.num_dof):
             self.link_names.append('link' + str(i))
         self.link_names.append('end_effector')
+        self.link_home_positions = None
         self.initialize(base_pos_global, screw_list, end_effector_home, joint_poses_home)
         self.link_mass_transforms = 0
         self.box_spatial_links = 0
-        self.link_home_positions = None
         self.link_dimensions = None
         self.grav = np.array([0, 0, -9.81])
         self.fail_count = 0
@@ -75,10 +75,17 @@ class Arm:
         """
         self.screw_list = screw_list
         self.original_screw_list_body = np.copy(screw_list)
+        if self.link_home_positions is not None:
+            for i in range((self.num_dof)):
+                base_to_link = fsr.globalToLocal(self.base_pos_global, self.link_home_positions[i])
+                new_global = fsr.localToGlobal(base_pos_global, base_to_link)
+                self.link_home_positions[i] = new_global
         self.base_pos_global = base_pos_global
         self.original_joint_poses_home = joint_poses_home
         self.joint_poses_home = np.zeros((3, self.num_dof))
         self.screw_list_body = np.zeros((6, self.num_dof))
+
+
         if joint_poses_home.size > 1:
             for i in range(0, self.num_dof):
                 self.joint_poses_home[0:3, i] = fsr.transformByVector(
