@@ -1836,6 +1836,8 @@ def loadArmFromURDF(file_name):
                         temp_element.vis_origin, temp_element.vis_properties])
                 col_props.append([temp_element.col_type,
                         temp_element.col_origin, temp_element.col_properties])
+            if temp_element.sub_type == 'fixed':
+                joint_poses[-1] = joint_poses[-1] @ temp_element.xyz_origin
             temp_element = mostChildren(temp_element)
             continue
         joint_poses.append(joint_poses[-1] @ temp_element.xyz_origin)
@@ -1848,6 +1850,8 @@ def loadArmFromURDF(file_name):
         joint_homes[0:3, arrind] = joint_poses[-1][0:3].flatten()
         temp_element = mostChildren(temp_element)
         arrind+=1
+
+    disp(joint_poses, "joint poses")
 
 
     #disp(joint_poses, 'Joint poses')
