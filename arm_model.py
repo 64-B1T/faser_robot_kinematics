@@ -1714,10 +1714,15 @@ def loadArmFromURDF(file_name):
                 new_element.max_effort = child.get('effort')
                 new_element.max_velocity = child.get('velocity')
 
-    def findNamedElement(named_element):
+    def findNamedElement(named_element, type='all'):
         for element in elements:
             if element.name == named_element:
-                return element
+                if type == 'all':
+                    return element
+                if type == 'link' and element.type == 'link':
+                    return element
+                if type == 'joint' and element.type == 'joint':
+                    return element
 
     def totalChildren(element):
         if element.num_children == 0:
@@ -1770,7 +1775,7 @@ def loadArmFromURDF(file_name):
     #Assign Parents and Children to complete chain
     for child in root:
         if child.tag == 'joint':
-            this_element = findNamedElement(child.get('name'))
+            this_element = findNamedElement(child.get('name'), 'joint')
             parent_name = 'world'
             child_name = ''
             for sub_child in child:

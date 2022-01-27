@@ -40,6 +40,7 @@ class SP:
         self.top_plate_pos = tT.copy()
         self.bottom_joints_space = np.zeros((3, 6))
         self.top_joints_space = np.zeros((3, 6))
+        self.current_plate_transform_local = tm()
 
         #Debug
         self.leg_ext_safety = .001
@@ -1983,7 +1984,7 @@ def makeSP(bRad, tRad, spacing, baseT,
     bottom = baseT.copy()
     #Generate top position at offset from the bottom position
     top = bottom @ tm(np.array([0.0, 0.0, platOffset, 0.0, 0.0, 0.0]))
-    sp = SP(bj, tj, bottom, top, 0, 0, plate_thickness_avg, plate_thickness_avg, 'sp')
+    sp = SP(bj, tj, bottom, top, 0, 1, plate_thickness_avg, plate_thickness_avg, 'sp')
     sp.bRad = bRad
     sp.tRad = tRad
 
